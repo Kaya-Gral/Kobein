@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyCameroon — Never Fall Behind</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857', 900: '#064e3b' },
+                        cameroon: { red: '#ce1126', green: '#007a5e', yellow: '#fcd116' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .skeleton { background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .glass { background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); }
+        .dark .glass { background: rgba(17,24,39,0.8); }
+        .note-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .note-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[60] space-y-2"></div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full z-50 glass border-b border-gray-200 dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-xl tracking-tight">StudyCameroon</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1" data-i18n="tagline">Never Fall Behind</p>
+                    </div>
+                </div>
+
+                <div class="hidden md:flex items-center gap-6">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="search-input" placeholder="Search notes, subjects..." 
+                            class="pl-10 pr-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 border-none focus:ring-2 focus:ring-brand-500 w-64 transition-all"
+                            oninput="handleSearch(this.value)">
+                    </div>
+                    <button onclick="toggleLanguage()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold text-sm">
+                        <span id="lang-btn">FR</span>
+                    </button>
+                    <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    </button>
+                    <div id="auth-section">
+                        <button onclick="openAuthModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-full font-medium transition-all shadow-md hover:shadow-lg">
+                            <span data-i18n="signin">Sign In</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden glass border-t border-gray-200 dark:border-gray-800 px-4 py-4 space-y-3">
+            <input type="text" id="mobile-search" placeholder="Search..." class="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none" oninput="handleSearch(this.value)">
+            <div class="flex gap-3">
+                <button onclick="toggleLanguage()" class="flex-1 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 font-semibold">EN / FR</button>
+                <button onclick="toggleTheme()" class="flex-1 py-2 rounded-lg bg-gray-100 dark:bg-gray-800">Theme</button>
+            </div>
+            <button onclick="openAuthModal()" class="w-full bg-brand-600 text-white py-2 rounded-lg font-medium">Sign In</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-28 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="text-center max-w-3xl mx-auto">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-sm font-medium mb-6">
+                <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+                <span data-i18n="hero-badge">5,000+ notes uploaded</span>
+            </div>
+            <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
+                <span data-i18n="hero-title-1">Missed class?</span><br>
+                <span class="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent" data-i18n="hero-title-2">We got your back.</span>
+            </h2>
+            <p class="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto" data-i18n="hero-desc">
+                Access class notes and past exam questions from top students across Cameroon. 
+                Free for recent notes. Premium for full archives.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button onclick="scrollToNotes()" class="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-book-open"></i>
+                    <span data-i18n="browse-notes">Browse Notes</span>
+                </button>
+                <button onclick="openPremiumModal()" class="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 dark:hover:border-brand-500 px-8 py-3 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-crown text-yellow-500"></i>
+                    <span data-i18n="go-premium">Go Premium</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-8 sticky top-20 z-40 py-2" id="filter-bar">
+        <div class="glass rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1" id="subject-filters">
+                    <button onclick="filterBySubject('all')" class="filter-btn active px-4 py-2 rounded-full bg-brand-600 text-white text-sm font-medium whitespace-nowrap transition-all" data-subject="all">All</button>
+                    <!-- Populated by JS -->
+                </div>
+                <div class="flex gap-2">
+                    <select id="class-filter" onchange="applyFilters()" class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm font-medium focus:ring-2 focus:ring-brand-500">
+                        <option value="all" data-i18n="all-classes">All Classes</option>
+                        <option value="form1">Form 1 / 6ème</option>
+                        <option value="form2">Form 2 / 5ème</option>
+                        <option value="form3">Form 3 / 4ème</option>
+                        <option value="form4">Form 4 / 3ème</option>
+                        <option value="form5">Form 5 / 2nde</option>
+                        <option value="lower6">Lower 6 / 1ère</option>
+                        <option value="upper6">Upper 6 / Tle</option>
+                    </select>
+                    <select id="type-filter" onchange="applyFilters()" class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm font-medium focus:ring-2 focus:ring-brand-500">
+                        <option value="all" data-i18n="all-types">All Types</option>
+                        <option value="notes" data-i18n="class-notes">Class Notes</option>
+                        <option value="exam" data-i18n="exam-questions">Exam Questions</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Notes Grid -->
+    <section class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20" id="notes-section">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-bold" data-i18n="recent-notes">Recent Notes</h3>
+            <div id="user-status" class="hidden items-center gap-2 px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-sm font-medium">
+                <i class="fas fa-star"></i>
+                <span>Free Plan</span>
+            </div>
+        </div>
+
+        <div id="notes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Skeleton Loading -->
+            <div class="skeleton rounded-2xl h-64"></div>
+            <div class="skeleton rounded-2xl h-64"></div>
+            <div class="skeleton rounded-2xl h-64"></div>
+            <div class="skeleton rounded-2xl h-64"></div>
+        </div>
+
+        <div id="empty-state" class="hidden text-center py-20">
+            <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <i class="fas fa-search text-3xl text-gray-400"></i>
+            </div>
+            <h4 class="text-xl font-semibold mb-2" data-i18n="no-notes">No notes found</h4>
+            <p class="text-gray-500 dark:text-gray-400" data-i18n="try-different">Try a different search or filter</p>
+        </div>
+    </section>
+
+    <!-- Premium CTA -->
+    <section class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20">
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 text-white p-8 sm:p-12">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 bg-yellow-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
+            <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+                <div class="max-w-xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-sm font-medium mb-4">
+                        <i class="fas fa-crown text-yellow-300"></i>
+                        <span>Premium</span>
+                    </div>
+                    <h3 class="text-3xl font-bold mb-4" data-i18n="premium-title">Unlock Everything</h3>
+                    <ul class="space-y-3 text-brand-100">
+                        <li class="flex items-center gap-3"><i class="fas fa-check-circle text-yellow-300"></i> <span data-i18n="premium-f1">Unlimited access to all subjects</span></li>
+                        <li class="flex items-center gap-3"><i class="fas fa-check-circle text-yellow-300"></i> <span data-i18n="premium-f2">Full archive (not just last 2 weeks)</span></li>
+                        <li class="flex items-center gap-3"><i class="fas fa-check-circle text-yellow-300"></i> <span data-i18n="premium-f3">Offline downloads for low-data study</span></li>
+                        <li class="flex items-center gap-3"><i class="fas fa-check-circle text-yellow-300"></i> <span data-i18n="premium-f4">Exam questions from top schools</span></li>
+                    </ul>
+                </div>
+                <div class="text-center lg:text-right">
+                    <div class="text-5xl font-bold mb-2">2,500 <span class="text-2xl font-medium">FCFA</span></div>
+                    <p class="text-brand-200 mb-6" data-i18n="per-year">per year</p>
+                    <button onclick="openPremiumModal()" class="bg-white text-brand-700 hover:bg-brand-50 px-8 py-3 rounded-full font-bold text-lg shadow-xl transition-all">
+                        <span data-i18n="upgrade-now">Upgrade Now</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white">
+                        <i class="fas fa-graduation-cap text-sm"></i>
+                    </div>
+                    <span class="font-bold text-lg">StudyCameroon</span>
+                </div>
+                <div class="flex gap-6 text-sm text-gray-500 dark:text-gray-400">
+                    <a href="#" class="hover:text-brand-600 transition-colors">About</a>
+                    <a href="#" class="hover:text-brand-600 transition-colors">Contact</a>
+                    <a href="#" class="hover:text-brand-600 transition-colors">Terms</a>
+                    <a href="#" class="hover:text-brand-600 transition-colors">Privacy</a>
+                </div>
+                <div class="text-sm text-gray-400 dark:text-gray-600">
+                    Made with care for Cameroonian students
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 z-[70] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAuthModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold" id="auth-title">Sign In</h3>
+                    <button onclick="closeAuthModal()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="auth-form" onsubmit="handleAuth(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Email</label>
+                            <input type="email" id="auth-email" required class="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Password</label>
+                            <input type="password" id="auth-password" required minlength="6" class="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <div id="auth-name-field" class="hidden">
+                            <label class="block text-sm font-medium mb-1">Full Name</label>
+                            <input type="text" id="auth-name" class="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <button type="submit" id="auth-submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold transition-all">
+                            Sign In
+                        </button>
+                    </div>
+                </form>
+                <p class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <span id="auth-toggle-text">Don't have an account?</span>
+                    <button onclick="toggleAuthMode()" class="text-brand-600 font-medium hover:underline ml-1" id="auth-toggle-btn">Sign Up</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+  <!-- Note Viewer Modal -->
+<div id="note-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeNoteModal()"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4 max-h-[90vh]">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-start">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span id="note-modal-subject" class="px-2 py-1 rounded-md bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-semibold">Subject</span>
+            <span id="note-modal-class" class="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-semibold">Form 5</span>
+            <span id="note-modal-type" class="px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">Notes</span>
+          </div>
+          <h3 id="note-modal-title" class="text-xl font-bold">Note Title</h3>
+          <p id="note-modal-meta" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Uploaded 2 days ago</p>
+        </div>
+        <button onclick="closeNoteModal()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto">
+        <p id="note-modal-desc" class="text-gray-600 dark:text-gray-300 mb-6">Description goes here...</p>
+        <div id="premium-blocker" class="hidden bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 text-center">
+          <i class="fas fa-lock text-4xl text-yellow-500 mb-3"></i>
+          <h4 class="font-bold text-lg mb-2">Premium Content</h4>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">This note is older than 14 days. Upgrade to Premium to access all archives.</p>
+          <button onclick="closeNoteModal(); openPremiumModal()" class="bg-brand-600 text-white px-6 py-2 rounded-full font-medium hover:bg-brand-700 transition-all">
+            Upgrade to Premium
+          </button>
+        </div>
+        <div id="note-actions" class="flex gap-3">
+          <a id="note-download-btn" href="#" target="_blank" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold text-center transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-download"></i> Download
+          </a>
+          <button onclick="shareNote()" class="px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+            <i class="fas fa-share-alt"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Premium Modal -->
+<div id="premium-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePremiumModal()"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold">Go Premium</h3>
+        <button onclick="closePremiumModal()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="text-center mb-6">
+        <div class="text-4xl font-bold text-brand-600">2,500 FCFA</div>
+        <p class="text-gray-500 dark:text-gray-400">per year</p>
+      </div>
+      <div class="space-y-3 mb-7">
+        <div class="flex items-center gap-3 text-sm"><i class="fas fa-check text-brand-500"></i> Unlimited subjects</div>
+        <div class="flex items-center gap-3 text-sm"><i class="fas fa-check text-brand-500"></i> Full archive access</div>
+        <div class="flex items-center gap-3 text-sm"><i class="fas fa-check text-brand-500"></i> Offline downloads</div>
+        <div class="flex items-center gap-3 text-sm"><i class="fas fa-check text-brand-500"></i> Exam questions</div>
+      </div>
+      <div class="space-y-3">
+        <button onclick="requestPremium()" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold transition-all">
+          Pay with Mobile Money
+        </button>
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200 dark:border-gray-700"></div></div>
+          <div class="relative flex justify-center text-sm"><span class="px-2 bg-white dark:bg-gray-800 text-gray-500">or</span></div>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="coupon-code" placeholder="Enter coupon code" class="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-none text-sm focus:ring-2 focus:ring-brand-500">
+          <button onclick="applyCoupon()" class="px-4 py-2 bg-gray-800 dark:bg-gray-600 text-white rounded-lg font-medium text-sm hover:bg-gray-700 transition-all">Apply</button>
+        </div>
+        <p class="mt-4 text-xs text-center text-gray-500 dark:text-gray-400">
+          After payment, your account will be upgraded within 24 hours.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==================== CONFIG ====================
+  // REPLACE THESE WITH YOUR SUPABASE CREDENTIALS
+  const SUPABASE_URL = 'https://your-project.supabase.co';
+  const SUPABASE_ANON_KEY = 'your-anon-key';
+
+  // Initialize Supabase
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ==================== STATE ====================
+  let currentUser = null;
+  let userProfile = null;
+  let allNotes = [];
+  let filteredNotes = [];
+  let currentFilter = { subject: 'all', class: 'all', type: 'all', search: '' };
+  let authMode = 'signin';
+  let lang = localStorage.getItem('lang') || 'en';
+
+  // ==================== TRANSLATIONS ====================
+  const i18n = {
+    en: {
+      tagline: 'Never Fall Behind',
+      'hero-badge': '5,000+ notes uploaded',
+      'hero-title-1': 'Missed class?',
+      'hero-title-2': 'We got your back.',
+      'hero-desc': 'Access class notes and past exam questions from top students across Cameroon. Free for recent notes. Premium for full archives.',
+      'browse-notes': 'Browse Notes',
+      'go-premium': 'Go Premium',
+      signin: 'Sign In',
+      'recent-notes': 'Recent Notes',
+      'no-notes': 'No notes found',
+      'try-different': 'Try a different search or filter',
+      'premium-title': 'Unlock Everything',
+      'premium-f1': 'Unlimited access to all subjects',
+      'premium-f2': 'Full archive (not just last 2 weeks)',
+      'premium-f3': 'Offline downloads for low-data study',
+      'premium-f4': 'Exam questions from top schools',
+      'per-year': 'per year',
+      'upgrade-now': 'Upgrade Now',
+      'all-classes': 'All Classes',
+      'all-types': 'All Types',
+      'class-notes': 'Class Notes',
+      'exam-questions': 'Exam Questions',
+    },
+    fr: {
+      tagline: 'Ne Reste Jamais en Arrière',
+      'hero-badge': 'Plus de 5 000 notes',
+      'hero-title-1': 'Cours manqué?',
+      'hero-title-2': 'On vous couvre.',
+      'hero-desc': 'Accédez aux notes de cours et aux examens des meilleurs élèves du Cameroun. Gratuit pour les notes récentes. Premium pour les archives complètes.',
+      'browse-notes': 'Parcourir',
+      'go-premium': 'Passer Premium',
+      signin: 'Connexion',
+      'recent-notes': 'Notes Récentes',
+      'no-notes': 'Aucune note trouvée',
+      'try-different': 'Essayez une autre recherche',
+      'premium-title': 'Débloquez Tout',
+      'premium-f1': 'Accès illimité à toutes les matières',
+      'premium-f2': 'Archives complètes',
+      'premium-f3': 'Téléchargements hors ligne',
+      'premium-f4': "Questions d'Examens",
+      'per-year': 'par an',
+      'upgrade-now': 'Passer Premium',
+      'all-classes': 'Toutes Classes',
+      'all-types': 'Tous Types',
+      'class-notes': 'Notes de Cours',
+      'exam-questions': "Questions d'Examen"
+    }
+  };
+
+
+const subjects = [
+  { id: 'mathematics', name: 'Mathematics', icon: 'fa-calculator', color: 'bg-blue-500' },
+  { id: 'english', name: 'English', icon: 'fa-book', color: 'bg-indigo-500' },
+  { id: 'french', name: 'French', icon: 'fa-language', color: 'bg-purple-500' },
+  { id: 'biology', name: 'Biology', icon: 'fa-dna', color: 'bg-green-500' },
+  { id: 'chemistry', name: 'Chemistry', icon: 'fa-flask', color: 'bg-yellow-500' },
+  { id: 'physics', name: 'Physics', icon: 'fa-atom', color: 'bg-indigo-500' },
+  { id: 'history', name: 'History', icon: 'fa-landmark', color: 'bg-orange-500' },
+  { id: 'geography', name: 'Geography', icon: 'fa-globe', color: 'bg-teal-500' },
+  { id: 'economics', name: 'Economics', icon: 'fa-chart-line', color: 'bg-cyan-500' },
+  { id: 'computer-science', name: 'Computer Science', icon: 'fa-laptop-code', color: 'bg-gray-500' },
+];
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
+  initLanguage();
+  renderSubjectFilters();
+  
+  // Check auth
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadUserProfile();
+    updateAuthUI();
+  }
+  
+  // Load notes
+  await loadNotes();
+});
+
+// ==================== THEME & LANG ====================
+function initTheme() {
+  if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+  }
+}
+
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+}
+
+function initLanguage() {
+  document.getElementById('lang-btn').textContent = lang === 'en' ? 'FR' : 'EN';
+  applyTranslations();
+}
+
+function toggleLanguage() {
+  lang = lang === 'en' ? 'fr' : 'en';
+  localStorage.setItem('lang', lang);
+  document.getElementById('lang-btn').textContent = lang === 'en' ? 'FR' : 'EN';
+  applyTranslations();
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang] && i18n[lang][key]) {
+      el.textContent = i18n[lang][key];
+    }
+  });
+}
+
+// ==================== AUTH ====================
+function openAuthModal() {
+  document.getElementById('auth-modal').classList.remove('hidden');
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.add('hidden');
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('auth-title').textContent = authMode === 'signin' ? 'Sign In' : 'Sign Up';
+  document.getElementById('auth-submit').textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-toggle-btn').textContent = authMode === 'signin' ? 'Sign Up' : 'Sign In';
+  document.getElementById('auth-name-field').classList.toggle('hidden', authMode === 'signin');
+}
+
+async function handleAuth(e) {
+  e.preventDefault();
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  const name = document.getElementById('auth-name').value;
+  
+  try {
+    if (authMode === 'signin') {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      currentUser = data.user;
+    } else {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      currentUser = data.user;
+      
+      // Create profile
+      await supabase.from('profiles').insert([{ id: currentUser.id, full_name: name, role: 'student', is_premium: false }]);
+    }
+    
+    await loadUserProfile();
+    updateAuthUI();
+    closeAuthModal();
+    showToast('Welcome!', 'success');
+    loadNotes(); // reload to apply premium filter
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function loadUserProfile() {
+  if (!currentUser) return;
+  const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+  userProfile = data;
+}
+
+function updateAuthUI() {
+  const container = document.getElementById('auth-section');
+  const status = document.getElementById('user-status');
+  
+  if (currentUser && userProfile) {
+    container.innerHTML = `
+      <div class="flex items-center gap-3">
+        <span class="hidden sm:inline text-sm font-medium">${userProfile.full_name || currentUser.email}</span>
+        <button onclick="signOut()" class="text-sm text-red-500 hover:text-red-600 font-medium">Logout</button>
+      </div>
+    `;
+    status.classList.remove('hidden');
+    status.classList.add('flex');
+    status.innerHTML = userProfile.is_premium
+      ? `<i class="fas fa-crown text-yellow-500"></i><span class="text-xs font-medium">Premium</span>`
+      : `<span class="flex items-center gap-2 px-2 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-medium">Free Plan</span>`;
+  } else {
+    container.innerHTML = `<button onclick="openAuthModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-full font-medium shadow-lg shadow-brand-500/30 transition-all">Sign In</button>`;
+    status.classList.add('hidden');
+    status.classList.remove('flex');
+  }
+}
+
+async function signOut() {
+  await supabase.auth.signOut();
+  currentUser = null;
+  userProfile = null;
+  updateAuthUI();
+  showToast('Signed out', 'info');
+  loadNotes();
+}
+
+// ==================== NOTES ====================
+function renderSubjectFilters() {
+  const container = document.getElementById('subject-filters');
+  subjects.forEach(sub => {
+    const btn = document.createElement('button');
+    btn.className = `filter-btn px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap transition-all hover:bg-gray-200 dark:hover:bg-gray-700`;
+    btn.textContent = sub.name;
+    btn.dataset.subject = sub.id;
+    btn.onclick = () => filterBySubject(sub.id);
+    container.appendChild(btn);
+  });
+}
+
+async function loadNotes() {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    allNotes = data || [];
+    applyFilters();
+  } catch (err) {
+    showToast('Failed to load notes', 'error');
+    // Fallback demo data if table doesn't exist yet
+    allNotes = getDemoNotes();
+    applyFilters();
+  }
+}
+
+function getDemoNotes() {
+  const now = new Date();
+  return [
+    { id: 1, title: 'Differentiation Rules', subject: 'mathematics', class_level: 'form5', description: 'Complete notes on product rule, quotient rule, chain rule with worked examples.', file_url: '#', file_type: 'pdf', is_premium: false, is_exam: false, created_at: new Date(now - 86400000 * 2).toISOString(), downloads: 45, school: 'GBHS Limbe' },
+    { id: 2, title: 'GCE 2024 Biology Paper 2', subject: 'biology', class_level: 'upper6', description: 'Past exam questions with marking scheme from GCE Board.', file_url: '#', file_type: 'pdf', is_premium: true, is_exam: true, created_at: new Date(now - 86400000 * 128).toISOString(), downloads: 234, school: 'Saker Baptist College' },
+    { id: 3, title: 'French Literature Analysis', subject: 'french', class_level: 'lower6', description: "Chapter by chapter analysis of Corneille's Le Cid for BAC preparation.", file_url: '#', file_type: 'pdf', is_premium: false, is_exam: false, created_at: new Date(now - 86400000 * 5).toISOString(), downloads: 67, school: 'BHS Bamenda' },
+    { id: 4, title: 'Organic Chemistry - Alkanes', subject: 'chemistry', class_level: 'upper6', description: 'Structures, nomenclature, reactions of alkanes and alkenes.', file_url: '#', file_type: 'pdf', is_premium: false, is_exam: false, created_at: new Date(now - 86400000 * 20).toISOString(), downloads: 89, school: 'Sacred Heart College' },
+    { id: 5, title: 'English Language Essay Writing Guide', subject: 'english', class_level: 'form5', description: 'How to write argumentative, narrative essays for GCE.', file_url: '#', file_type: 'pdf', is_premium: false, is_exam: false, created_at: new Date(now - 86400000 * 1).toISOString(), downloads: 156, school: 'PCHS Kumba' },
+    { id: 6, title: 'Physics - Electromagnetism Notes', subject: 'physics', class_level: 'upper6', description: "Magnetic fields, Faraday's law, transformers - explained with diagrams.", file_url: '#', file_type: 'pdf', is_premium: false, is_exam: false, created_at: new Date(now - 86400000 * 3).toISOString(), downloads: 56, school: 'GBHS Limbe' },
+  ];
+}
+
+function filterBySubject(subjectId) {
+  currentFilter.subject = subjectId;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    if (btn.dataset.subject === subjectId) {
+      btn.className = 'filter-btn px-4 py-2 rounded-full bg-brand-600 text-white text-sm font-medium whitespace-nowrap transition-all';
+    } else {
+      btn.className = 'filter-btn px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium whitespace-nowrap transition-all hover:bg-gray-200 dark:hover:bg-gray-700';
+    }
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  const classFilter = document.getElementById('class-filter').value;
+  const typeFilter = document.getElementById('type-filter').value;
+  
+  currentFilter.class = classFilter;
+  currentFilter.type = typeFilter;
+  
+  filteredNotes = allNotes.filter(note => {
+    const matchSubject = currentFilter.subject === 'all' || note.subject === currentFilter.subject;
+    const matchClass = currentFilter.class === 'all' || note.class_level === currentFilter.class;
+    const matchType = currentFilter.type === 'all' || (currentFilter.type === 'exam' ? note.is_exam : !note.is_exam);
+    const matchSearch = !currentFilter.search || note.title.toLowerCase().includes(currentFilter.search.toLowerCase()) || note.description.toLowerCase().includes(currentFilter.search.toLowerCase());
+    return matchSubject && matchClass && matchType && matchSearch;
+  });
+  
+  renderNotes();
+}
+
+function handleSearch(query) {
+  currentFilter.search = query;
+  applyFilters();
+}
+
+function renderNotes() {
+  const grid = document.getElementById('notes-grid');
+  const empty = document.getElementById('empty-state');
+  
+  if (filteredNotes.length === 0) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  
+  empty.classList.add('hidden');
+  
+  grid.innerHTML = filteredNotes.map(note => {
+    const subject = subjects.find(s => s.id === note.subject) || { name: note.subject, color: 'bg-gray-500', icon: 'fa-file' };
+    const isOld = new Date() - new Date(note.created_at) > 14 * 24 * 60 * 60 * 1000;
+    const isLocked = isOld && !(userProfile?.is_premium);
+    const dateStr = new Date(note.created_at).toLocaleDateString();
+    
+    return `
+      <div class="note-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer group relative overflow-hidden" onclick="openNote(${note.id})">
+        ${isLocked ? `<div class="absolute top-0 right-0 w-8 h-8 rounded-bl-full bg-yellow-100 dark:bg-yellow-900/50 flex items-center justify-center"><i class="fas fa-lock text-yellow-600 dark:text-yellow-400 text-xs"></i></div>` : ''}
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-4">
+            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white ${subject.color}">
+              <i class="fas ${subject.icon}"></i>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-medium">${dateStr}</span>
+          </div>
+          <h4 class="font-bold text-lg mb-1 group-hover:text-brand-600 transition-colors">${note.title}</h4>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">${note.description}</p>
+          <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+            <span class="flex items-center gap-1"><i class="fas fa-school"></i> ${note.school}</span>
+            <span class="flex items-center gap-1"><i class="fas fa-download"></i> ${note.downloads || 0}</span>
+          </div>
+          ${note.is_exam ? `<span class="mt-3 inline-block px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">Exam</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+// =================== NOTE VIEWER ===================
+function openNote(noteId) {
+  const note = allNotes.find(n => n.id === noteId);
+  if (!note) return;
+
+  const subject = subjects.find(s => s.id === note.subject) || { name: note.subject };
+
+  const isOld = new Date(note.created_at) < new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+  const isLocked = isOld && (!userProfile || !userProfile.is_premium);
+
+  document.getElementById('note-modal-title').textContent = note.title;
+
+  document.getElementById('note-modal-subject').textContent = subject.name;
+
+  document.getElementById('note-modal-class').textContent = note.class_level.toUpperCase().replace('FORM', 'Form ').replace('LOWER', 'Lower ').replace('UPPER', 'Upper ');
+
+  document.getElementById('note-modal-type').textContent = note.is_exam ? 'Exam' : 'Notes';
+
+  document.getElementById('note-modal-meta').textContent = `${note.school || 'Unknown'} • ${new Date(note.created_at).toLocaleDateString()}`;
+
+  document.getElementById('note-modal-desc').textContent = note.description;
+
+  document.getElementById('note-download-btn').href = note.file_url;
+
+  const blocker = document.getElementById('premium-blocker');
+
+  const actions = document.getElementById('note-actions');
+
+  if (isLocked) {
+    blocker.classList.remove('hidden');
+    actions.classList.add('hidden');
+  } else {
+    blocker.classList.add('hidden');
+    actions.classList.remove('hidden');
+
+    // Track download
+    document.getElementById('note-download-btn').onclick = () => trackDownload(note.id);
+  }
+
+  document.getElementById('note-modal').classList.remove('hidden');
+}
+
+function closeNoteModal() {
+  document.getElementById('note-modal').classList.add('hidden');
+}
+
+async function trackDownload(noteId) {
+  try {
+    await supabase.from('notes').update({ downloads: supabase.rpc('increment', { x: 1 }) }).eq('id', noteId);
+  } catch(e) {
+    console.log('Download tracked locally');
+  }
+}
+
+function shareNote() {
+  const note = allNotes.find(n => n.id === window.currentNoteId);
+  if (navigator.share) {
+    navigator.share({ title: note.title, text: note.description, url: window.location.href });
+  } else {
+    showToast('Link copied to clipboard!', 'success');
+  }
+}
+
+// =================== PREMIUM ===================
+function openPremiumModal() {
+  document.getElementById('premium-modal').classList.remove('hidden');
+}
+
+function closePremiumModal() {
+  document.getElementById('premium-modal').classList.add('hidden');
+}
+
+async function requestPremium() {
+  if (!currentUser) {
+    closePremiumModal();
+    openAuthModal();
+    showToast('Please sign in first', 'info');
+    return;
+  }
+
+  try {
+    await supabase.from('premium_requests').insert([{
+      user_id: currentUser.id,
+      email: currentUser.email,
+      phone: userProfile?.phone || '',
+      amount: 2500,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    }]);
+
+    showToast('Payment request sent! Check your phone.', 'success');
+    closePremiumModal();
+  } catch (err) {
+    showToast('Request saved. Admin will contact you.', 'info');
+    closePremiumModal();
+  }
+}
+
+async function applyCoupon() {
+  const code = document.getElementById('coupon-code').value.trim().toUpperCase();
+  if (!code) return;
+  if (!currentUser) {
+    showToast('Please sign in first', 'info');
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.from('coupons').select('*').eq('code', code).single();
+
+    if (error || !data || data.uses_left <= 0) {
+      showToast('Invalid or expired coupon', 'error');
+      return;
+    }
+
+    // Activate premium
+    await supabase.from('profiles').update({ is_premium: true, premium_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() }).eq('id', currentUser.id);
+
+    await supabase.from('coupons').update({ uses_left: data.uses_left - 1 }).eq('id', data.id);
+
+    await loadUserProfile();
+    updateAuthUI();
+    showToast('Premium activated!', 'success');
+    closePremiumModal();
+    loadNotes();
+  } catch (err) {
+    showToast('Error applying coupon', 'error');
+  }
+}
+
+// =================== UI HELPERS ===================
+function scrollToNotes() {
+  document.getElementById('notes-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleMobileMenu() {
+  document.getElementById('mobile-menu').classList.toggle('hidden');
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+
+  const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
+  const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+
+  toast.className = `${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 transform translate-x-full transition-transform duration-300`;
+
+  toast.innerHTML = `<i class="fas ${icons[type]}"></i><span class="font-medium text-sm">${message}</span>`;
+
+  container.appendChild(toast);
+
+  setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+
+  setTimeout(() => {
+    toast.classList.add('translate-x-full');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Listen for auth changes
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN') {
+    currentUser = session.user;
+    await loadUserProfile();
+    updateAuthUI();
+    loadNotes();
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    userProfile = null;
+    updateAuthUI();
+    loadNotes();
+  }
+});
+</script>
+</body>
+</html>
