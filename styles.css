@@ -1,5 +1,6 @@
 /* ==================== BASE ==================== */
 html { scroll-behavior: smooth; }
+
 /* ==================== SKELETON LOADING ==================== */
 .skeleton {
     background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
@@ -10,6 +11,7 @@ html { scroll-behavior: smooth; }
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
 /* ==================== GLASSMORPHISM ==================== */
 .glass {
     background: rgba(255, 255, 255, 0.85);
@@ -19,6 +21,7 @@ html { scroll-behavior: smooth; }
 .dark .glass {
     background: rgba(17, 24, 39, 0.85);
 }
+
 /* ==================== NOTE CARDS ==================== */
 .note-card {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -27,12 +30,14 @@ html { scroll-behavior: smooth; }
     transform: translateY(-4px);
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
+
 /* ==================== SCROLLBAR HIDE ==================== */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+
 /* ==================== AUTH GATE ANIMATION ==================== */
 #auth-gate {
     transition: opacity 0.4s ease, transform 0.4s ease;
@@ -42,6 +47,7 @@ html { scroll-behavior: smooth; }
     pointer-events: none;
     transform: scale(1.02);
 }
+
 /* ==================== MAIN APP REVEAL ==================== */
 #main-app {
     animation: fadeIn 0.5s ease;
@@ -50,6 +56,7 @@ html { scroll-behavior: smooth; }
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
 /* ==================== TOAST ANIMATION ==================== */
 .toast-enter {
     animation: slideInRight 0.3s ease forwards;
@@ -58,6 +65,7 @@ html { scroll-behavior: smooth; }
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+
 /* ==================== MOBILE OPTIMIZATIONS ==================== */
 @media (max-width: 640px) {
     .note-card:hover {

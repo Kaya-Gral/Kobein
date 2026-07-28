@@ -94,6 +94,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     initLanguage();
     renderSubjectFilters();
 
+    // Re-attach auth form handler
+    const authForm = document.getElementById('auth-form');
+    if (authForm) {
+        authForm.onsubmit = handleAuth;
+    }
+
     if (!supabase) {
         showToast('Offline mode — some features unavailable', 'info');
         loadNotes();
@@ -145,6 +151,31 @@ function applyTranslations() {
         const key = el.getAttribute('data-i18n');
         if (i18n[lang] && i18n[lang][key]) el.textContent = i18n[lang][key];
     });
+
+    // Translate dropdown options
+    const classFilter = document.getElementById('class-filter');
+    if (classFilter) {
+        const allClassesOption = classFilter.querySelector('option[value="all"]');
+        if (allClassesOption) {
+            allClassesOption.textContent = i18n[lang]['all-classes'] || 'All Classes';
+        }
+    }
+
+    const typeFilter = document.getElementById('type-filter');
+    if (typeFilter) {
+        const allTypesOption = typeFilter.querySelector('option[value="all"]');
+        if (allTypesOption) {
+            allTypesOption.textContent = i18n[lang]['all-types'] || 'All Types';
+        }
+        const notesOption = typeFilter.querySelector('option[value="notes"]');
+        if (notesOption) {
+            notesOption.textContent = i18n[lang]['class-notes'] || 'Class Notes';
+        }
+        const examOption = typeFilter.querySelector('option[value="exam"]');
+        if (examOption) {
+            examOption.textContent = i18n[lang]['exam-questions'] || 'Exam Questions';
+        }
+    }
 }
 
 // ==================== AUTH GATE ====================
@@ -184,7 +215,6 @@ async function handleAuth(e) {
 
             currentUser = data.user;
 
-            // If email confirmation is enabled and no session is returned, stop here
             if (!data.session) {
                 showToast('Account created! Please check your email to confirm.', 'info');
                 btn.disabled = false;
@@ -192,7 +222,6 @@ async function handleAuth(e) {
                 return;
             }
 
-            // Try to create profile, but don't crash the whole flow if RLS blocks it
             try {
                 await supabase.from('profiles').upsert([{
                     id: currentUser.id,
@@ -211,6 +240,8 @@ async function handleAuth(e) {
         showToast(authMode === 'signin' ? 'Welcome back!' : 'Account created!', 'success');
     } catch (err) {
         showToast(err.message || 'Authentication failed', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
     } finally {
         btn.disabled = false;
         btn.textContent = originalText;
@@ -286,11 +317,18 @@ async function signOut() {
     userProfile = null;
     location.reload();
 }
-
 // ==================== NOTES ====================
 function renderSubjectFilters() {
     const container = document.getElementById('subject-filters');
     if (!container) return;
+
+    // Add "All" button first
+    const allBtn = document.createElement('button');
+    allBtn.className = 'filter-btn active px-4 py-2 rounded-full bg-brand-600 text-white text-sm font-medium whitespace-nowrap transition-all';
+    allBtn.textContent = 'All';
+    allBtn.dataset.subject = 'all';
+    allBtn.onclick = () => filterBySubject('all');
+    container.appendChild(allBtn);
 
     subjects.forEach(sub => {
         const btn = document.createElement('button');
@@ -424,212 +462,211 @@ function openNote(noteId) {
     const isLocked = isOld && (!userProfile || !userProfile.is_premium);
 
     const titleEl = document.getElementById('note-modal-title');
-const subjectEl = document.getElementById('note-modal-subject');
-const classEl = document.getElementById('note-modal-class');
-const typeEl = document.getElementById('note-modal-type');
-const metaEl = document.getElementById('note-modal-meta');
-const descEl = document.getElementById('note-modal-desc');
-const downloadBtn = document.getElementById('note-download-btn');
-const blocker = document.getElementById('premium-blocker');
-const actions = document.getElementById('note-actions');
-const modal = document.getElementById('note-modal');
+    const subjectEl = document.getElementById('note-modal-subject');
+    const classEl = document.getElementById('note-modal-class');
+    const typeEl = document.getElementById('note-modal-type');
+    const metaEl = document.getElementById('note-modal-meta');
+    const descEl = document.getElementById('note-modal-desc');
+    const downloadBtn = document.getElementById('note-download-btn');
+    const blocker = document.getElementById('premium-blocker');
+    const actions = document.getElementById('note-actions');
+    const modal = document.getElementById('note-modal');
 
-if (titleEl) titleEl.textContent = note.title || 'Untitled';
-if (subjectEl) subjectEl.textContent = subject.name;
-if (classEl) classEl.textContent = (note.class_level || '').toUpperCase().replace('FORM', 'Form ').replace('LOWER', 'Lower ').replace('UPPER', 'Upper ');
-if (typeEl) typeEl.textContent = note.is_exam ? 'Exam' : 'Notes';
-if (metaEl) metaEl.textContent = `${note.school || 'Unknown'} • ${new Date(note.created_at).toLocaleDateString()}`;
-if (descEl) descEl.textContent = note.description || '';
+    if (titleEl) titleEl.textContent = note.title || 'Untitled';
+    if (subjectEl) subjectEl.textContent = subject.name;
+    if (classEl) classEl.textContent = (note.class_level || '').toUpperCase().replace('FORM', 'Form ').replace('LOWER', 'Lower ').replace('UPPER', 'Upper ');
+    if (typeEl) typeEl.textContent = note.is_exam ? 'Exam' : 'Notes';
+    if (metaEl) metaEl.textContent = `${note.school || 'Unknown'} • ${new Date(note.created_at).toLocaleDateString()}`;
+    if (descEl) descEl.textContent = note.description || '';
 
-if (downloadBtn) {
-  downloadBtn.href = note.file_url || '#';
-  downloadBtn.onclick = null;
-}
-
-if (blocker && actions) {
-  if (isLocked) {
-    blocker.classList.remove('hidden');
-    actions.classList.add('hidden');
-  } else {
-    blocker.classList.add('hidden');
-    actions.classList.remove('hidden');
     if (downloadBtn) {
-      downloadBtn.onclick = (e) => {
-        e.preventDefault();
-        trackDownload(note.id);
-        if (note.file_url && note.file_url !== '#') {
-          window.open(note.file_url, '_blank');
-        }
-      };
+        downloadBtn.href = note.file_url || '#';
+        // Remove existing listeners
+        const newBtn = downloadBtn.cloneNode(true);
+        downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+        // Add new listener
+        newBtn.addEventListener('click', function(e) {
+            if (note.file_url && note.file_url !== '#') {
+                e.preventDefault();
+                trackDownload(note.id);
+                window.open(note.file_url, '_blank');
+            }
+        });
     }
-  }
-}
 
-if (modal) modal.classList.remove('hidden');
+    if (blocker && actions) {
+        if (isLocked) {
+            blocker.classList.remove('hidden');
+            actions.classList.add('hidden');
+        } else {
+            blocker.classList.add('hidden');
+            actions.classList.remove('hidden');
+        }
+    }
+
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeNoteModal() {
-  const modal = document.getElementById('note-modal');
-  if (modal) modal.classList.add('hidden');
+    const modal = document.getElementById('note-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 async function trackDownload(noteId) {
-  if (!supabase) return;
-  try {
-    const { data } = await supabase.from('notes').select('downloads').eq('id', noteId).single();
-    const current = data?.downloads || 0;
-    await supabase.from('notes').update({ downloads: current + 1 }).eq('id', noteId);
-  } catch (e) {
-    console.log('Download tracked locally');
-  }
+    if (!supabase) return;
+    try {
+        const { data } = await supabase.from('notes').select('downloads').eq('id', noteId).single();
+        const current = data?.downloads || 0;
+        await supabase.from('notes').update({ downloads: current + 1 }).eq('id', noteId);
+    } catch (e) {
+        console.log('Download tracked locally');
+    }
 }
 
 function shareNote() {
-  const note = allNotes.find(n => n.id === currentNoteId);
-  if (!note) return;
+    const note = allNotes.find(n => n.id === currentNoteId);
+    if (!note) return;
 
-  const shareData = {
-    title: note.title || 'StudyCameroon Note',
-    text: note.description || '',
-    url: window.location.href
-  };
+    const shareData = {
+        title: note.title || 'StudyCameroon Note',
+        text: note.description || '',
+        url: window.location.href
+    };
 
-  if (navigator.share) {
-    navigator.share(shareData).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      showToast('Link copied to clipboard!', 'success');
-    }).catch(() => {
-      showToast('Failed to copy link', 'error');
-    });
-  }
+    if (navigator.share) {
+        navigator.share(shareData).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            showToast('Link copied to clipboard!', 'success');
+        }).catch(() => {
+            showToast('Failed to copy link', 'error');
+        });
+    }
 }
 
 // ================== PREMIUM ==================
-
 function openPremiumModal() {
-  const modal = document.getElementById('premium-modal');
-  if (modal) modal.classList.remove('hidden');
+    const modal = document.getElementById('premium-modal');
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closePremiumModal() {
-  const modal = document.getElementById('premium-modal');
-  if (modal) modal.classList.add('hidden');
+    const modal = document.getElementById('premium-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 async function requestPremium() {
-  if (!currentUser) {
-    closePremiumModal();
-    showToast('Please sign in first', 'info');
-    return;
-  }
+    if (!currentUser) {
+        closePremiumModal();
+        showToast('Please sign in first', 'info');
+        return;
+    }
 
-  if (!supabase) {
-    showToast('Service unavailable', 'error');
-    return;
-  }
+    if (!supabase) {
+        showToast('Service unavailable', 'error');
+        return;
+    }
 
-  try {
-    await supabase.from('premium_requests').insert([{
-      user_id: currentUser.id,
-      email: currentUser.email,
-      phone: userProfile?.phone || '',
-      amount: 2500,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    }]);
-    showToast('Payment request sent! Admin will contact you.', 'success');
-    closePremiumModal();
-  } catch (err) {
-    showToast('Request saved locally', 'info');
-    closePremiumModal();
-  }
+    try {
+        await supabase.from('premium_requests').insert([{
+            user_id: currentUser.id,
+            email: currentUser.email,
+            phone: userProfile?.phone || '',
+            amount: 2500,
+            status: 'pending',
+            created_at: new Date().toISOString()
+        }]);
+        showToast('Payment request sent! Admin will contact you.', 'success');
+        closePremiumModal();
+    } catch (err) {
+        showToast('Request saved locally', 'info');
+        closePremiumModal();
+    }
 }
 
 async function applyCoupon() {
-  const input = document.getElementById('coupon-code');
-  const code = input ? input.value.trim().toUpperCase() : '';
-  if (!code) return;
+    const input = document.getElementById('coupon-code');
+    const code = input ? input.value.trim().toUpperCase() : '';
+    if (!code) return;
 
-  if (!currentUser) {
-    showToast('Please sign in first', 'info');
-    return;
-  }
-
-  if (!supabase) {
-    showToast('Service unavailable', 'error');
-    return;
-  }
-
-  try {
-    const { data, error } = await supabase.from('coupons').select('*').eq('code', code).single();
-    if (error || !data || data.uses_left <= 0) {
-      showToast('Invalid or expired coupon', 'error');
-      return;
+    if (!currentUser) {
+        showToast('Please sign in first', 'info');
+        return;
     }
 
-    await supabase.from('profiles').update({
-      is_premium: true,
-      premium_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-    }).eq('id', currentUser.id);
+    if (!supabase) {
+        showToast('Service unavailable', 'error');
+        return;
+    }
 
-    await supabase.from('coupons').update({ uses_left: data.uses_left - 1 }).eq('id', data.id);
+    try {
+        const { data, error } = await supabase.from('coupons').select('*').eq('code', code).single();
+        if (error || !data || data.uses_left <= 0) {
+            showToast('Invalid or expired coupon', 'error');
+            return;
+        }
 
-    await loadUserProfile();
-    updateAuthUI();
-    showToast('Premium activated!', 'success');
-    closePremiumModal();
-    applyFilters();
-  } catch (err) {
-    showToast('Error applying coupon', 'error');
-  }
+        await supabase.from('profiles').update({
+            is_premium: true,
+            premium_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+        }).eq('id', currentUser.id);
+
+        await supabase.from('coupons').update({ uses_left: data.uses_left - 1 }).eq('id', data.id);
+
+        await loadUserProfile();
+        updateAuthUI();
+        showToast('Premium activated!', 'success');
+        closePremiumModal();
+        applyFilters();
+    } catch (err) {
+        showToast('Error applying coupon', 'error');
+    }
 }
 
 // ================== UI HELPERS ==================
-
 function scrollToNotes() {
-  const section = document.getElementById('notes-section');
-  if (section) section.scrollIntoView({ behavior: 'smooth' });
+    const section = document.getElementById('notes-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
 }
 
 function toggleMobileMenu() {
-  const menu = document.getElementById('mobile-menu');
-  if (menu) menu.classList.toggle('hidden');
+    const menu = document.getElementById('mobile-menu');
+    if (menu) menu.classList.toggle('hidden');
 }
 
 function showToast(message, type = 'info') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+    const container = document.getElementById('toast-container');
+    if (!container) return;
 
-  const toast = document.createElement('div');
-  const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
-  const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    const toast = document.createElement('div');
+    const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
 
-  toast.className = `${colors[type] || colors.info} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 toast-enter`;
-  toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span class="font-medium text-sm">${message}</span>`;
+    toast.className = `${colors[type] || colors.info} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 toast-enter`;
+    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span class="font-medium text-sm">${message}</span>`;
 
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
+    container.appendChild(toast);
     setTimeout(() => {
-      if (toast.parentNode) toast.remove();
-    }, 300);
-  }, 3000);
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (toast.parentNode) toast.remove();
+        }, 300);
+    }, 3000);
 }
 
 // Listen for auth state changes
 if (supabase) {
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN') {
-      currentUser = session?.user || null;
-      if (currentUser) {
-        await loadUserProfile();
-        unlockApp();
-      }
-    } else if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      userProfile = null;
-    }
-  });
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN') {
+            currentUser = session?.user || null;
+            if (currentUser) {
+                await loadUserProfile();
+                unlockApp();
+            }
+        } else if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            userProfile = null;
+        }
+    });
 }
