@@ -784,7 +784,7 @@ async function loadNotes(){
   const { data, error } = await supabaseClient
     .from('notes')
     .select('*')
-    .order('date', { ascending: false });
+    .order('created_at', { ascending: false });
   if(error){ console.error(error); return; }
   notes = data || [];
 }
@@ -820,7 +820,7 @@ function renderNotes(){
   let f = notes.filter(n=>{
     const m = n.title.toLowerCase().includes(q) || n.subject.toLowerCase().includes(q);
     return m && (currentFilter==='all' || n.subject===currentFilter);
-  }).sort((a,b)=> new Date(b.date) - new Date(a.date));
+  }).sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
 
   if(f.length===0){ g.style.display='none'; e.style.display='block'; return; }
   g.style.display='grid'; e.style.display='none';
@@ -834,7 +834,7 @@ function renderNotes(){
         <span>${escapeHtml(n.author_name||'Teacher')}</span>
       </div>
       <div class="note-excerpt">${escapeHtml(n.content.substring(0,140))}...</div>
-      <div class="note-meta"><span>📅 ${fmtDate(n.date)}</span><span>📄 ${fmtSize(n.size || n.content?.length || 0)}</span></div>
+      <div class="note-meta"><span>📅 ${fmtDate(n.created_at)}</span><span>📄 ${fmtSize(n.size || n.content?.length || 0)}</span></div>
     </div>
   `).join('');
 }
@@ -875,7 +875,7 @@ function openNote(id){
   if(!n) return;
   addRecent(id);
   document.getElementById('modalTitle').textContent = n.title;
-  document.getElementById('modalMeta').textContent = `${n.subject} • ${fmtDate(n.date)} • ${n.author_name||'Teacher'}`;
+  document.getElementById('modalMeta').textContent = `${n.subject} • ${fmtDate(n.created_at)} • ${n.author_name||'Teacher'}`;
   document.getElementById('modalBody').textContent = n.content;
   const overlay = document.getElementById('readerModal');
   overlay.classList.add('active');
