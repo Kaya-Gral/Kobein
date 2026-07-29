@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><title>School Portal — Students</title>
+<style>
+:root{
+  --primary:#4f46e5;--primary-dark:#4338ca;--primary-light:#e0e7ff;
+  --bg:#f8fafc;--card:#ffffff;--text:#0f172a;--text-light:#64748b;
+  --border:#e2e8f0;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;
+  --radius:12px;--shadow:0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-lg:0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+[data-theme="dark"]{
+  --bg:#0f172a;--card:#1e293b;--text:#f1f5f9;
+  --text-light:#94a3b8;--border:#334155;--primary-light:#312e81;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;
+  transition:background .3s,color .3s;
+}
+#authGate{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+}
+.auth-box{
+  background:var(--card);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  width:100%;max-width:440px;overflow:hidden;
+}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border);}
+.auth-tab{
+  flex:1;padding:20px;text-align:center;cursor:pointer;background:#f8f9fa;
+  border:none;font-size:16px;font-weight:600;color:#666;transition:all .3s;
+}
+.auth-tab.active{background:var(--card);color:var(--primary);border-bottom:3px solid var(--primary);}
+.auth-form{display:none;padding:36px 32px;}
+.auth-form.active{display:block;animation:fadeIn .4s;}
+.auth-form h2{margin-bottom:6px;font-size:24px;}
+.auth-form .subtitle{color:var(--text-light);margin-bottom:28px;font-size:14px;}
+.input-group{margin-bottom:18px;position:relative;}
+.input-group label{display:block;margin-bottom:6px;font-size:14px;font-weight:600;}
+.input-group input{
+  width:100%;padding:12px 40px 12px 16px;border:2px solid var(--border);
+  border-radius:10px;font-size:15px;outline:none;transition:border-color .3s,box-shadow .3s;
+  background:var(--card);color:var(--text);
+}
+.input-group input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light);}
+.input-group input.valid{border-color:var(--success);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}
+.input-group input.invalid{border-color:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,0.15);}
+.input-icon{
+  position:absolute;right:14px;top:38px;font-size:18px;pointer-events:none;
+  opacity:0;transition:opacity .2s;
+}
+.input-icon.show{opacity:1;}
+.input-hint{font-size:12px;margin-top:4px;height:16px;transition:color .2s;}
+.input-hint.valid{color:var(--success);}
+.input-hint.invalid{color:var(--danger);}
+.checkbox-group{display:flex;align-items:center;gap:8px;margin-bottom:20px;}
+.checkbox-group input{width:auto;cursor:pointer;}
+.checkbox-group label{margin:0;font-size:13px;color:var(--text-light);cursor:pointer;}
+.btn{
+  padding:12px 24px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn:hover{background:var(--bg);}
+.btn-primary{
+  background:linear-gradient(135deg,var(--primary),#818cf8);
+  color:white;border:none;justify-content:center;width:100%;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(79,70,229,0.4);}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--text-light);}
+.btn-ghost:hover{color:var(--text);background:var(--bg);}
+.forgot-password{text-align:center;margin-top:16px;}
+.forgot-password a{color:var(--primary);text-decoration:none;font-size:14px;}
+.terms{font-size:12px;color:var(--text-light);text-align:center;margin-top:16px;line-height:1.5;}
+.terms a{color:var(--primary);text-decoration:none;}
+#app{display:none;}
+
+.header{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);
+}
+.header-content{
+  max-width:1200px;margin:0 auto;height:64px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.logo{
+  display:flex;align-items:center;gap:12px;
+  font-size:20px;font-weight:700;color:var(--primary);text-decoration:none;
+}
+.logo-icon{
+  width:36px;height:36px;background:linear-gradient(135deg,var(--primary),#818cf8);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  color:white;font-size:18px;
+}
+.nav-tabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:10px;}
+.nav-tab{
+  padding:8px 18px;border-radius:8px;border:none;background:transparent;
+  color:var(--text-light);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;
+}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{background:var(--card);color:var(--primary);box-shadow:var(--shadow);}
+.user-menu{display:flex;align-items:center;gap:12px;}
+.role-badge{
+  padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;
+  background:var(--primary-light);color:var(--primary);
+}
+.main{max-width:1200px;margin:0 auto;padding:32px 24px;}
+.view{display:none;}
+.view.active{display:block;animation:fadeIn .3s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* Subject Colors */
+.tag-math{background:#dbeafe;color:#1e40af;}
+.tag-science{background:#dcfce7;color:#166534;}
+.tag-english{background:#fef3c7;color:#92400e;}
+.tag-history{background:#fee2e2;color:#991b1b;}
+.tag-geography{background:#cffafe;color:#0e7490;}
+.tag-computer-science{background:#f3e8ff;color:#6b21a8;}
+.tag-physics{background:#e0e7ff;color:#3730a3;}
+.tag-chemistry{background:#ffedd5;color:#9a3412;}
+.tag-biology{background:#fce7f3;color:#9d174d;}
+.tag-other{background:#f3f4f6;color:#374151;}
+
+/* Skeleton */
+.skeleton{
+  background:linear-gradient(90deg,var(--border) 25%,var(--bg) 50%,var(--border) 75%);
+  background-size:200% 100%;animation:skeleton 1.5s infinite;border-radius:var(--radius);
+}
+@keyframes skeleton{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skeleton-card{height:160px;width:100%;}
+.skeleton-title{height:18px;width:60%;margin-bottom:12px;border-radius:6px;}
+.skeleton-line{height:12px;width:40%;border-radius:6px;}
+
+.page-title{font-size:28px;font-weight:800;margin-bottom:6px;}
+.page-subtitle{color:var(--text-light);margin-bottom:24px;}
+
+.recent-strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;margin-bottom:24px;}
+.recent-chip{
+  flex-shrink:0;padding:10px 18px;background:var(--card);border:1px solid var(--border);
+  border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:8px;
+}
+.recent-chip:hover{border-color:var(--primary);color:var(--primary);}
+
+.search-box{position:relative;margin-bottom:20px;max-width:400px;}
+.search-box input{
+  width:100%;padding:12px 16px 12px 44px;border:1px solid var(--border);
+  border-radius:var(--radius);font-size:15px;background:var(--card);outline:none;color:var(--text);
+}
+.search-box input:focus{border-color:var(--primary);}
+.search-box::before{
+  content:"🔍";position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.5;
+}
+.filters{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+.filter-btn{
+  padding:8px 16px;border-radius:20px;border:1px solid var(--border);
+  background:var(--card);color:var(--text-light);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .2s;
+}
+.filter-btn:hover{border-color:var(--primary);color:var(--primary);}
+.filter-btn.active{background:var(--primary);color:white;border-color:var(--primary);}
+
+.notes-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;
+}
+.note-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+}
+.note-card:hover{
+  box-shadow:var(--shadow-lg);transform:translateY(-2px);border-color:var(--primary-light);
+}
+.note-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  opacity:0;transition:opacity .2s;
+}
+.note-card:hover::before{opacity:1;}
+.note-subject{
+  display:inline-block;padding:4px 12px;font-size:11px;font-weight:700;border-radius:20px;
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;
+}
+.note-title{font-size:18px;font-weight:700;margin-bottom:8px;line-height:1.3;}
+.note-author{
+  display:flex;align-items:center;gap:8px;margin-bottom:10px;
+  font-size:13px;color:var(--text-light);
+}
+.note-author img{width:20px;height:20px;border-radius:50%;}
+.note-excerpt{
+  font-size:13px;color:var(--text-light);line-height:1.5;margin-bottom:12px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.note-meta{display:flex;align-items:center;gap:12px;color:var(--text-light);font-size:12px;}
+.empty-state{text-align:center;padding:80px 20px;color:var(--text-light);}
+.empty-state-icon{font-size:64px;margin-bottom:16px;opacity:.3;}
+.empty-state h3{color:var(--text);margin-bottom:8px;}
+/* Modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:24px;
+}
+.modal-overlay.active{display:flex;}
+.modal{
+  background:var(--card);border-radius:var(--radius);width:100%;max-width:800px;
+  max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;
+  transform:scale(.95);opacity:0;transition:transform .2s,opacity .2s;
+}
+.modal-overlay.active .modal{transform:scale(1);opacity:1;}
+.modal-header{
+  padding:24px 32px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;background:var(--bg);
+}
+.modal-title{font-size:20px;font-weight:700;}
+.modal-subtitle{font-size:13px;color:var(--text-light);margin-top:2px;}
+.modal-close{
+  width:36px;height:36px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:all .2s;
+}
+.modal-close:hover{background:var(--danger);color:white;border-color:var(--danger);}
+.modal-body{
+  padding:32px;overflow-y:auto;flex:1;line-height:1.8;font-size:16px;
+  white-space:pre-wrap;font-family:Georgia,'Times New Roman',serif;
+}
+.reading-progress{
+  position:absolute;top:0;left:0;height:3px;background:var(--primary);
+  width:0%;transition:width .1s;z-index:10;
+}
+
+/* Mobile Bottom Sheet */
+@media(max-width:640px){
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .modal{
+    border-radius:20px 20px 0 0;max-height:88vh;transform:translateY(100%);
+    transition:transform .35s cubic-bezier(.4,0,.2,1);
+  }
+  .modal-overlay.active .modal{transform:translateY(0);}
+  .sheet-handle{
+    width:40px;height:5px;background:var(--border);border-radius:3px;margin:10px auto 6px;
+  }
+  .modal-header{padding:8px 20px 16px;}
+  .modal-body{padding:20px;}
+}
+
+/* Settings */
+.settings-layout{display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:start;}
+@media(max-width:768px){.settings-layout{grid-template-columns:1fr;}}
+.settings-sidebar{position:sticky;top:24px;}
+.settings-nav{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:8px;box-shadow:var(--shadow);
+}
+.settings-nav-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;
+  cursor:pointer;font-size:14px;font-weight:600;color:var(--text-light);
+  transition:all .2s;border:none;background:none;width:100%;text-align:left;
+}
+.settings-nav-item:hover{background:var(--bg);color:var(--text);}
+.settings-nav-item.active{background:var(--primary-light);color:var(--primary);}
+
+.settings-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin-bottom:24px;overflow:hidden;display:none;
+}
+.settings-card.active{display:block;animation:fadeIn .3s;}
+.settings-card-header{padding:24px 28px 0;}
+.settings-card-header h2{font-size:18px;font-weight:700;}
+.settings-card-header p{color:var(--text-light);font-size:14px;margin-top:2px;}
+.settings-card-body{padding:24px 28px;}
+.settings-card-footer{
+  padding:16px 28px;background:var(--bg);border-top:1px solid var(--border);
+  display:flex;justify-content:flex-end;gap:12px;
+}
+
+.avatar-section{display:flex;align-items:center;gap:20px;margin-bottom:24px;}
+.avatar-preview{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--border);background:var(--bg);}
+.avatar-actions{display:flex;flex-direction:column;gap:8px;}
+.file-btn{position:relative;overflow:hidden;display:inline-block;}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:640px){.form-grid{grid-template-columns:1fr;}}
+.form-group{margin-bottom:20px;}
+.form-group label{display:block;margin-bottom:6px;font-size:14px;font-weight:600;}
+.form-group input,.form-group select,.form-group textarea{
+  width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;
+  font-size:15px;font-family:inherit;background:var(--card);color:var(--text);outline:none;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--primary);}
+.form-group textarea{min-height:100px;resize:vertical;line-height:1.6;}
+
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 0;border-bottom:1px solid var(--border);
+}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-info h4{font-size:15px;font-weight:600;margin-bottom:2px;}
+.toggle-info p{font-size:13px;color:var(--text-light);}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{
+  position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:24px;transition:.3s;
+}
+.slider:before{
+  content:"";position:absolute;height:18px;width:18px;left:3px;bottom:3px;
+  background:white;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);
+}
+input:checked+.slider{background:var(--primary);}
+input:checked+.slider:before{transform:translateX(20px);}
+
+.session-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px;border:1px solid var(--border);border-radius:8px;margin-bottom:12px;
+}
+.session-info{display:flex;align-items:center;gap:14px;}
+.session-icon{
+  width:40px;height:40px;background:var(--primary-light);color:var(--primary);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.session-details h4{font-size:14px;font-weight:600;}
+.session-details p{font-size:13px;color:var(--text-light);}
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;}
+.badge-green{background:#d1fae5;color:#065f46;}
+
+.danger-zone{border:1px solid var(--danger);border-radius:var(--radius);padding:20px;margin-top:8px;}
+.danger-zone h3{color:var(--danger);font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.danger-zone p{color:var(--text-light);font-size:14px;margin-bottom:16px;}
+
+.divider{height:1px;background:var(--border);margin:24px 0;}
+
+/* Undo Toast */
+.toast{
+  position:fixed;bottom:24px;right:24px;background:var(--text);color:white;
+  padding:14px 20px;border-radius:12px;font-weight:500;box-shadow:var(--shadow-lg);
+  z-index:300;transform:translateY(120px);opacity:0;transition:all .35s cubic-bezier(.4,0,.2,1);
+  display:flex;align-items:center;gap:16px;max-width:420px;
+}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast-undo{
+  background:transparent;color:var(--primary-light);border:none;font-weight:700;
+  cursor:pointer;font-size:14px;padding:4px 8px;border-radius:6px;transition:background .2s;
+}
+.toast-undo:hover{background:rgba(255,255,255,0.1);}
+.toast-progress{
+  position:absolute;bottom:0;left:0;height:3px;background:var(--primary);
+  width:100%;transform-origin:left;animation:progress 5s linear forwards;
+}
+@keyframes progress{to{transform:scaleX(0);}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+@media(max-width:640px){
+  .header-content{flex-wrap:wrap;height:auto;padding:12px 0;gap:10px;}
+  .main{padding:20px 16px;}
+  .notes-grid{grid-template-columns:1fr;}
+  .modal-header{padding:8px 16px 12px;}
+  .modal-body{padding:16px;}
+  .toast{left:16px;right:16px;max-width:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH GATE -->
+<div id="authGate">
+  <div class="auth-box">
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+    <form id="signin" class="auth-form active" onsubmit="handleSignin(event)">
+      <h2>Welcome back</h2>
+      <p class="subtitle">Sign in to access your school portal</p>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="signinEmail" placeholder="you@school.edu" required oninput="validateSigninEmail()">
+        <span class="input-icon" id="signinEmailIcon"></span>
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="signinPassword" placeholder="••••••••" required>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe">Remember me</label>
+      </div>
+      <button type="submit" class="btn btn-primary">Sign In</button>
+      <div class="forgot-password"><a href="#">Forgot your password?</a></div>
+    </form>
+    <form id="signup" class="auth-form" onsubmit="handleSignup(event)">
+      <h2>Create account</h2>
+      <p class="subtitle">Get started with your school portal</p>
+      <div class="input-group">
+        <label>Full Name</label>
+        <input type="text" id="signupName" placeholder="John Doe" required>
+      </div>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="signupEmail" placeholder="you@school.edu" required oninput="validateSignupEmail()">
+        <span class="input-icon" id="signupEmailIcon"></span>
+        <div class="input-hint" id="signupEmailHint"></div>
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="signupPassword" placeholder="••••••••" required minlength="8" oninput="validateSignupPassword()">
+        <span class="input-icon" id="signupPassIcon"></span>
+        <div class="input-hint" id="signupPassHint"></div>
+      </div>
+      <div class="input-group">
+        <label>Confirm Password</label>
+        <input type="password" id="signupConfirm" placeholder="••••••••" required oninput="validateSignupMatch()">
+        <span class="input-icon" id="signupMatchIcon"></span>
+        <div class="input-hint" id="signupMatchHint"></div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="signupBtn" disabled>Create Account</button>
+      <p class="terms">By signing up, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a></p>
+    </form>
+  </div>
+</div>
+<!-- APP -->
+<div id="app">
+  <header class="header">
+    <div class="header-content">
+      <a href="#" class="logo" onclick="showAppView('notes')">
+        <div class="logo-icon">📚</div>
+        School Portal
+      </a>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="showAppView('notes')" id="tab-notes">📖 Notes</button>
+        <button class="nav-tab" onclick="showAppView('account')" id="tab-account">⚙️ Account</button>
+      </nav>
+      <div class="user-menu">
+        <span class="role-badge" id="headerRole">Student</span>
+        <button class="btn btn-ghost" onclick="logout()">🚪 Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- NOTES VIEW -->
+    <div class="view active" id="view-notes">
+      <h1 class="page-title">Class Notes</h1>
+      <p class="page-subtitle">Access all your study materials from home</p>
+
+      <div class="recent-strip" id="recentStrip" style="display:none;">
+        <span style="font-size:13px;color:var(--text-light);font-weight:600;padding:10px 0;">Recently viewed:</span>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search notes by title or subject..." oninput="onSearch()">
+      </div>
+      <div class="filters" id="subjectFilters">
+        <button class="filter-btn active" onclick="filterSubject('all')">All Subjects</button>
+      </div>
+
+      <!-- Skeleton loader -->
+      <div class="notes-grid" id="skeletonGrid" style="display:none;">
+        <div class="note-card skeleton"><div class="skeleton-title skeleton"></div><div class="skeleton-line skeleton" style="width:80%;"></div></div>
+        <div class="note-card skeleton"><div class="skeleton-title skeleton"></div><div class="skeleton-line skeleton" style="width:70%;"></div></div>
+        <div class="note-card skeleton"><div class="skeleton-title skeleton"></div><div class="skeleton-line skeleton" style="width:90%;"></div></div>
+      </div>
+
+      <div class="notes-grid" id="notesGrid"></div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-state-icon">📝</div>
+        <h3>No notes available yet</h3>
+        <p>Your teacher hasn't uploaded any class notes. Check back later!</p>
+      </div>
+    </div>
+
+    <!-- ACCOUNT VIEW -->
+    <div class="view" id="view-account">
+      <div class="settings-layout">
+        <aside class="settings-sidebar">
+          <div class="settings-nav">
+            <button class="settings-nav-item active" onclick="showSettingsSection('profile')"><span style="width:24px;">👤</span> Profile</button>
+            <button class="settings-nav-item" onclick="showSettingsSection('security')"><span style="width:24px;">🔒</span> Security</button>
+            <button class="settings-nav-item" onclick="showSettingsSection('preferences')"><span style="width:24px;">⚙️</span> Preferences</button>
+            <button class="settings-nav-item" onclick="showSettingsSection('privacy')"><span style="width:24px;">🛡️</span> Privacy</button>
+            <button class="settings-nav-item" onclick="showSettingsSection('sessions')"><span style="width:24px;">💻</span> Sessions</button>
+          </div>
+        </aside>
+
+        <div>
+          <!-- Profile -->
+          <div class="settings-card active" id="settings-profile">
+            <div class="settings-card-header"><h2>Public Profile</h2><p>This information is visible to others</p></div>
+            <div class="settings-card-body">
+              <div class="avatar-section">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="avatar-preview" id="avatarPreview">
+                <div class="avatar-actions">
+                  <div class="file-btn"><button class="btn">📷 Change Avatar</button><input type="file" accept="image/*" onchange="previewAvatar(this)"></div>
+                  <button class="btn btn-ghost" onclick="removeAvatar()">🗑️ Remove</button>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group"><label>First Name</label><input type="text" id="accFirstName" value="John"></div>
+                <div class="form-group"><label>Last Name</label><input type="text" id="accLastName" value="Doe"></div>
+                <div class="form-group full-width"><label>Display Name</label><input type="text" id="accDisplayName" value="JohnDoe"></div>
+                <div class="form-group full-width"><label>Bio</label><textarea id="accBio">Computer Science student.</textarea></div>
+                <div class="form-group"><label>Email</label><input type="email" id="accEmail" value="john@school.edu"></div>
+                <div class="form-group"><label>Phone</label><input type="tel" id="accPhone" value="+1 555 123 4567"></div>
+                <div class="form-group"><label>Location</label><input type="text" id="accLocation" value="San Francisco, CA"></div>
+                <div class="form-group"><label>Website</label><input type="url" id="accWebsite" value="https://johndoe.dev"></div>
+              </div>
+            </div>
+            <div class="settings-card-footer">
+              <button class="btn btn-ghost" onclick="resetAccount()">Cancel</button>
+              <button class="btn btn-primary" onclick="saveProfile()">💾 Save Profile</button>
+            </div>
+          </div>
+
+          <!-- Security -->
+          <div class="settings-card" id="settings-security">
+            <div class="settings-card-header"><h2>Security</h2><p>Update your password and enable 2FA</p></div>
+            <div class="settings-card-body">
+              <div class="form-group"><label>Current Password</label><input type="password" id="curPassword" placeholder="Enter current password"></div>
+              <div class="form-group"><label>New Password</label><input type="password" id="newPassword" placeholder="Enter new password" oninput="checkPasswordStrength()"></div>
+              <div class="form-group"><label>Confirm Password</label><input type="password" id="confPassword" placeholder="Confirm new password"></div>
+              <div id="passwordStrength" style="font-size:13px;color:var(--text-light);margin-bottom:16px;"></div>
+              <div class="divider"></div>
+              <div class="toggle-row">
+                <div class="toggle-info"><h4>Enable 2FA</h4><p>Add an extra layer of security</p></div>
+                <label class="switch"><input type="checkbox" id="toggle2FA"><span class="slider"></span></label>
+              </div>
+            </div>
+            <div class="settings-card-footer">
+              <button class="btn btn-primary" onclick="updatePassword()">🔐 Update Password</button>
+            </div>
+          </div>
+
+          <!-- Preferences -->
+          <div class="settings-card" id="settings-preferences">
+            <div class="settings-card-header"><h2>Preferences</h2><p>Customize your experience</p></div>
+            <div class="settings-card-body">
+              <div class="form-grid">
+                <div class="form-group"><label>Language</label><select id="prefLang"><option value="en" selected>English</option><option value="es">Español</option><option value="fr">Français</option></select></div>
+                <div class="form-group"><label>Timezone</label><select id="prefZone"><option>UTC-8</option><option selected>UTC-5</option><option>UTC+0</option><option>UTC+8</option></select></div>
+              </div>
+              <div class="divider"></div>
+              <div class="toggle-row"><div class="toggle-info"><h4>Dark Mode</h4><p>Switch between light and dark themes</p></div><label class="switch"><input type="checkbox" id="toggleTheme" onchange="toggleTheme()"><span class="slider"></span></label></div>
+              <div class="divider"></div>
+              <div class="toggle-row"><div class="toggle-info"><h4>Email Notifications</h4><p>Receive account activity updates</p></div><label class="switch"><input type="checkbox" id="toggleEmail" checked><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><h4>Marketing Emails</h4><p>News and product updates</p></div><label class="switch"><input type="checkbox" id="toggleMarketing"><span class="slider"></span></label></div>
+            </div>
+            <div class="settings-card-footer">
+              <button class="btn btn-primary" onclick="savePreferences()">💾 Save Preferences</button>
+            </div>
+          </div>
+
+          <!-- Privacy -->
+          <div class="settings-card" id="settings-privacy">
+            <div class="settings-card-header"><h2>Privacy</h2><p>Control your visibility and data</p></div>
+            <div class="settings-card-body">
+              <div class="toggle-row"><div class="toggle-info"><h4>Public Profile</h4><p>Allow others to view your profile</p></div><label class="switch"><input type="checkbox" id="togglePublic" checked><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><h4>Activity Status</h4><p>Show when you are online</p></div><label class="switch"><input type="checkbox" id="toggleActivity" checked><span class="slider"></span></label></div>
+              <div class="divider"></div>
+              <button class="btn" onclick="exportData()">📥 Download My Data</button>
+              <div class="danger-zone" style="margin-top:24px;">
+                <h3>⚠️ Danger Zone</h3>
+                <p>Once deleted, your account cannot be recovered.</p>
+                <button class="btn btn-danger" onclick="deleteAccount()">🗑️ Delete Account</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sessions -->
+          <div class="settings-card" id="settings-sessions">
+            <div class="settings-card-header"><h2>Active Sessions</h2><p>Manage your logged-in devices</p></div>
+            <div class="settings-card-body">
+              <div class="session-item">
+                <div class="session-info"><div class="session-icon">💻</div><div class="session-details"><h4>Chrome on macOS <span class="badge badge-green">Current</span></h4><p>San Francisco, CA • Active now</p></div></div>
+                <button class="btn btn-ghost" disabled>Active</button>
+              </div>
+              <div class="session-item">
+                <div class="session-info"><div class="session-icon">📱</div><div class="session-details"><h4>Safari on iPhone</h4><p>San Francisco, CA • 2 hours ago</p></div></div>
+                <button class="btn btn-ghost" onclick="revokeSession(this)">Revoke</button>
+              </div>
+              <div class="session-item">
+                <div class="session-info"><div class="session-icon">🖥️</div><div class="session-details"><h4>Firefox on Windows</h4><p>New York, NY • 3 days ago</p></div></div>
+                <button class="btn btn-ghost" onclick="revokeSession(this)">Revoke</button>
+              </div>
+              <div class="divider"></div>
+              <button class="btn btn-danger" onclick="revokeAllSessions()">🚪 Log Out All Devices</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- READER MODAL -->
+<div class="modal-overlay" id="readerModal" onclick="onBackdropClick(event)" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal" onclick="event.stopPropagation()" id="readerModalBox">
+    <div class="reading-progress" id="readingProgress"></div>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Note Title</div>
+        <div class="modal-subtitle" id="modalMeta">Subject • Date</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close reader">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button class="toast-undo" id="toastUndo" style="display:none;">Undo</button><div class="toast-progress" id="toastProgress"></div></div>
+
+<script>
+const SUPABASE_URL = 'https://lvypldbozwzzzbicgddd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXBsZGJvend6enpiaWNnZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMjQxOTYsImV4cCI6MjEwMDkwMDE5Nn0.arSebpJ6HAPIbNwSoyGkMuBuy4wlh9ZOwsUUsdesLv8';
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ===================== STATE ===================== */
+let notes = [];
+let currentUser = null;
+
+function recentKey(){ return 'sp_recent_' + (currentUser?.id || 'guest'); }
+function getRecent(){ return JSON.parse(localStorage.getItem(recentKey()) || '[]'); }
+function setRecent(v){ localStorage.setItem(recentKey(), JSON.stringify(v)); }
+
+/* ===================== AUTH ===================== */
+function switchAuthTab(mode){
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.toggle('active', t.textContent.toLowerCase().includes(mode)));
+  document.querySelectorAll('.auth-form').forEach(f=>f.classList.toggle('active', f.id===mode));
+}
+
+function setInputStatus(input, iconEl, hintEl, isValid, msg){
+  input.classList.remove('valid','invalid');
+  iconEl.classList.remove('show');
+  if(hintEl) hintEl.textContent = '';
+  if(msg === '') return;
+  input.classList.add(isValid ? 'valid' : 'invalid');
+  iconEl.textContent = isValid ? '✅' : '❌';
+  iconEl.classList.add('show');
+  if(hintEl){
+    hintEl.textContent = msg;
+    hintEl.className = 'input-hint ' + (isValid ? 'valid' : 'invalid');
+  }
+}
+
+function validateSigninEmail(){
+  const el = document.getElementById('signinEmail');
+  const icon = document.getElementById('signinEmailIcon');
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value);
+  setInputStatus(el, icon, null, valid, '');
+}
+
+function validateSignupEmail(){
+  const el = document.getElementById('signupEmail');
+  const icon = document.getElementById('signupEmailIcon');
+  const hint = document.getElementById('signupEmailHint');
+  if(!el.value){ setInputStatus(el,icon,hint,false,''); return; }
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value);
+  setInputStatus(el,icon,hint,valid, valid ? 'Looks good' : 'Enter a valid email address');
+  checkSignupReady();
+}
+
+function validateSignupPassword(){
+  const el = document.getElementById('signupPassword');
+  const icon = document.getElementById('signupPassIcon');
+  const hint = document.getElementById('signupPassHint');
+  if(!el.value){ setInputStatus(el,icon,hint,false,''); return; }
+  const v = el.value;
+  let s = 0;
+  if(v.length>=8) s++;
+  if(/[A-Z]/.test(v)) s++;
+  if(/[0-9]/.test(v)) s++;
+  if(/[^A-Za-z0-9]/.test(v)) s++;
+  const labels = ['Too weak','Weak','Good','Strong'];
+  const isValid = s >= 2 && v.length >= 8;
+  setInputStatus(el,icon,hint,isValid, isValid ? `Strength: ${labels[s-1]||'Weak'}` : 'Min 8 chars with uppercase, number, or symbol');
+  validateSignupMatch();
+  checkSignupReady();
+}
+
+function validateSignupMatch(){
+  const p = document.getElementById('signupPassword').value;
+  const el = document.getElementById('signupConfirm');
+  const icon = document.getElementById('signupMatchIcon');
+  const hint = document.getElementById('signupMatchHint');
+  if(!el.value){ setInputStatus(el,icon,hint,false,''); return; }
+  const valid = el.value === p && p !== '';
+  setInputStatus(el,icon,hint,valid, valid ? 'Passwords match' : 'Passwords do not match');
+  checkSignupReady();
+}
+
+function checkSignupReady(){
+  const emailOK = document.getElementById('signupEmail').classList.contains('valid');
+  const passOK = document.getElementById('signupPassword').classList.contains('valid');
+  const matchOK = document.getElementById('signupConfirm').classList.contains('valid');
+  const nameOK = document.getElementById('signupName').value.trim().length > 0;
+  document.getElementById('signupBtn').disabled = !(emailOK && passOK && matchOK && nameOK);
+}
+
+async function handleSignup(e){
+  e.preventDefault();
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('signupPassword').value;
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email, password: pass,
+    options: { data: { name } }
+  });
+  if(error){ showToast(error.message, 'danger'); return; }
+
+  if(data.user){
+    await supabaseClient.from('profiles').insert({
+      id: data.user.id, name, role: 'student'
+    });
+  }
+
+  showToast('Account created! Please sign in.');
+  switchAuthTab('signin');
+  document.getElementById('signinEmail').value = email;
+}
+
+async function handleSignin(e){
+  e.preventDefault();
+  const email = document.getElementById('signinEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('signinPassword').value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+  if(error){ showToast(error.message, 'danger'); return; }
+
+  currentUser = data.user;
+  await loadProfile();
+  enterApp();
+}
+
+async function logout(){
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  location.reload();
+}
+
+async function loadProfile(){
+  if(!currentUser) return;
+  const { data } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .single();
+  if(data){
+    currentUser.profile = data;
+    currentUser.name = data.name || currentUser.user_metadata?.name || '';
+  }
+}
+
+/* ===================== APP ENTRY ===================== */
+async function enterApp(){
+  document.getElementById('authGate').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('headerRole').textContent = 'Student';
+
+  await loadNotes();
+
+  if(currentUser?.profile?.avatar){
+    document.getElementById('avatarPreview').src = currentUser.profile.avatar;
+  }
+
+  await loadAccountFields();
+  renderRecent();
+
+  document.getElementById('skeletonGrid').style.display='grid';
+  document.getElementById('notesGrid').style.display='none';
+  setTimeout(()=>{
+    document.getElementById('skeletonGrid').style.display='none';
+    document.getElementById('notesGrid').style.display='grid';
+    renderNotes(); renderFilters();
+  }, 600);
+}
+
+async function loadNotes(){
+  const { data, error } = await supabaseClient
+    .from('notes')
+    .select('*')
+    .order('date', { ascending: false });
+  if(error){ console.error(error); return; }
+  notes = data || [];
+}
+
+/* ===================== NOTES ===================== */
+let currentFilter = 'all';
+let searchDebounce;
+
+function onSearch(){
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(renderNotes, 200);
+}
+
+function renderFilters(){
+  const subjects = [...new Set(notes.map(n=>n.subject))].sort();
+  const c = document.getElementById('subjectFilters');
+  let h = `<button class="filter-btn ${currentFilter==='all'?'active':''}" onclick="filterSubject('all')">All Subjects</button>`;
+  subjects.forEach(s=>{ h+=`<button class="filter-btn ${currentFilter===s?'active':''}" onclick="filterSubject('${s}')">${s}</button>`; });
+  c.innerHTML = h;
+}
+
+function filterSubject(s){ currentFilter=s; renderNotes(); renderFilters(); }
+
+function subjectClass(subject){
+  const map={'Mathematics':'tag-math','Science':'tag-science','English':'tag-english','History':'tag-history','Geography':'tag-geography','Computer Science':'tag-computer-science','Physics':'tag-physics','Chemistry':'tag-chemistry','Biology':'tag-biology'};
+  return map[subject] || 'tag-other';
+}
+
+function renderNotes(){
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const g = document.getElementById('notesGrid');
+  const e = document.getElementById('emptyState');
+  let f = notes.filter(n=>{
+    const m = n.title.toLowerCase().includes(q) || n.subject.toLowerCase().includes(q);
+    return m && (currentFilter==='all' || n.subject===currentFilter);
+  }).sort((a,b)=> new Date(b.date) - new Date(a.date));
+
+  if(f.length===0){ g.style.display='none'; e.style.display='block'; return; }
+  g.style.display='grid'; e.style.display='none';
+  g.innerHTML = f.map(n=>`
+    <div class="note-card" onclick="openNote('${n.id}')" style="position:relative;">
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--primary);opacity:0;transition:opacity .2s;" class="hover-bar"></div>
+      <span class="note-subject ${subjectClass(n.subject)}">${n.subject}</span>
+      <div class="note-title">${escapeHtml(n.title)}</div>
+      <div class="note-author">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(n.author_name||'Teacher')}" alt="">
+        <span>${escapeHtml(n.author_name||'Teacher')}</span>
+      </div>
+      <div class="note-excerpt">${escapeHtml(n.content.substring(0,140))}...</div>
+      <div class="note-meta"><span>📅 ${fmtDate(n.date)}</span><span>📄 ${fmtSize(n.size || n.content?.length || 0)}</span></div>
+    </div>
+  `).join('');
+}
+
+function renderRecent(){
+  const recent = getRecent();
+  const strip = document.getElementById('recentStrip');
+  if(!recent.length){ strip.style.display='none'; return; }
+  strip.style.display='flex';
+  const label = document.createElement('span');
+  label.style.cssText = 'font-size:13px;color:var(--text-light);font-weight:600;padding:10px 0;';
+  label.textContent = 'Recently viewed:';
+  strip.innerHTML = '';
+  strip.appendChild(label);
+  recent.slice(0,5).forEach(id=>{
+    const n = notes.find(x=>x.id===id);
+    if(!n) return;
+    const chip = document.createElement('div');
+    chip.className='recent-chip';
+    chip.innerHTML = `📄 ${escapeHtml(n.title)}`;
+    chip.onclick = ()=>openNote(n.id);
+    strip.appendChild(chip);
+  });
+}
+
+function addRecent(id){
+  let r = getRecent().filter(x=>x!==id);
+  r.unshift(id);
+  setRecent(r.slice(0,10));
+  renderRecent();
+}
+
+/* ===================== READER MODAL ===================== */
+let focusTrapHandler = null;
+
+function openNote(id){
+  const n = notes.find(x=>x.id===id);
+  if(!n) return;
+  addRecent(id);
+  document.getElementById('modalTitle').textContent = n.title;
+  document.getElementById('modalMeta').textContent = `${n.subject} • ${fmtDate(n.date)} • ${n.author_name||'Teacher'}`;
+  document.getElementById('modalBody').textContent = n.content;
+  const overlay = document.getElementById('readerModal');
+  overlay.classList.add('active');
+  document.body.style.overflow='hidden';
+
+  setTimeout(()=>{
+    const modal = document.getElementById('readerModalBox');
+    const focusables = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+    if(focusables.length) focusables[0].focus();
+    focusTrapHandler = (e)=>{
+      if(e.key!=='Tab') return;
+      const first = focusables[0], last = focusables[focusables.length-1];
+      if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
+      else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
+    };
+    modal.addEventListener('keydown', focusTrapHandler);
+
+    const body = document.getElementById('modalBody');
+    body.onscroll = ()=>{
+      const pct = body.scrollTop / (body.scrollHeight - body.clientHeight);
+      document.getElementById('readingProgress').style.width = Math.min(100, pct*100)+'%';
+    };
+    document.getElementById('readingProgress').style.width='0%';
+  }, 50);
+
+  initSwipeToClose();
+}
+
+function closeModal(){
+  const overlay = document.getElementById('readerModal');
+  overlay.classList.remove('active');
+  document.body.style.overflow='';
+  const modal = document.getElementById('readerModalBox');
+  if(focusTrapHandler) modal.removeEventListener('keydown', focusTrapHandler);
+  document.getElementById('modalBody').onscroll = null;
+}
+
+function onBackdropClick(e){ if(e.target===e.currentTarget) closeModal(); }
+
+let touchStartY = 0;
+function initSwipeToClose(){
+  const modal = document.getElementById('readerModalBox');
+  modal.ontouchstart = e=>{ touchStartY = e.touches[0].clientY; };
+  modal.ontouchmove = e=>{
+    if(window.innerWidth>640) return;
+    const diff = e.touches[0].clientY - touchStartY;
+    if(diff>0) modal.style.transform = `translateY(${diff}px)`;
+  };
+  modal.ontouchend = e=>{
+    if(window.innerWidth>640) return;
+    const diff = e.changedTouches[0].clientY - touchStartY;
+    if(diff>80){ closeModal(); }
+    modal.style.transform = '';
+  };
+}
+
+/* ===================== APP NAV ===================== */
+function showAppView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.getElementById('tab-'+view).classList.add('active');
+  if(view==='notes'){ renderRecent(); renderNotes(); renderFilters(); }
+}
+
+/* ===================== ACCOUNT SETTINGS ===================== */
+function showSettingsSection(sec){
+  document.querySelectorAll('.settings-card').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.settings-nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('settings-'+sec).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+async function loadAccountFields(){
+  if(!currentUser) return;
+
+  const { data: profile } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .single();
+
+  if(profile){
+    document.getElementById('accFirstName').value = profile.name?.split(' ')[0] || '';
+    document.getElementById('accLastName').value = profile.name?.split(' ').slice(1).join(' ') || '';
+    document.getElementById('accDisplayName').value = profile.display_name || '';
+    document.getElementById('accBio').value = profile.bio || '';
+    document.getElementById('accPhone').value = profile.phone || '';
+    document.getElementById('accLocation').value = profile.location || '';
+    document.getElementById('accWebsite').value = profile.website || '';
+    if(profile.avatar) document.getElementById('avatarPreview').src = profile.avatar;
+  } else {
+    const name = currentUser.user_metadata?.name || '';
+    document.getElementById('accFirstName').value = name.split(' ')[0] || '';
+    document.getElementById('accLastName').value = name.split(' ').slice(1).join(' ') || '';
+  }
+
+  document.getElementById('accEmail').value = currentUser.email || '';
+
+  const { data: prefs } = await supabaseClient
+    .from('preferences')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .single();
+
+  if(prefs){
+    if(prefs.lang) document.getElementById('prefLang').value = prefs.lang;
+    if(prefs.zone) document.getElementById('prefZone').value = prefs.zone;
+    if(prefs.dark !== undefined) document.getElementById('toggleTheme').checked = prefs.dark;
+    if(prefs.email !== undefined) document.getElementById('toggleEmail').checked = prefs.email;
+    if(prefs.marketing !== undefined) document.getElementById('toggleMarketing').checked = prefs.marketing;
+    if(prefs.dark) document.documentElement.setAttribute('data-theme','dark');
+  }
+}
+
+async function saveProfile(){
+  if(!currentUser) return;
+  const f = document.getElementById('accFirstName').value.trim();
+  const l = document.getElementById('accLastName').value.trim();
+  const e = document.getElementById('accEmail').value.trim();
+  if(!f||!l||!e){ showToast('Please fill required fields','danger'); return; }
+  if(!e.includes('@')){ showToast('Invalid email','danger'); return; }
+
+  const name = f+' '+l;
+  const profile = {
+    id: currentUser.id,
+    name,
+    display_name: document.getElementById('accDisplayName').value,
+    bio: document.getElementById('accBio').value,
+    phone: document.getElementById('accPhone').value,
+    location: document.getElementById('accLocation').value,
+    website: document.getElementById('accWebsite').value,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabaseClient.from('profiles').upsert(profile);
+  if(error){ showToast(error.message, 'danger'); return; }
+
+  if(e !== currentUser.email){
+    const { error: emailError } = await supabaseClient.auth.updateUser({ email: e });
+    if(emailError){ showToast(emailError.message, 'danger'); return; }
+    currentUser.email = e;
+  }
+
+  currentUser.name = name;
+  currentUser.profile = profile;
+  showToast('Profile saved');
+}
+
+async function previewAvatar(input){
+  if(input.files && input.files[0]){
+    const file = input.files[0];
+    const filePath = `avatars/${currentUser.id}/${Date.now()}_${file.name}`;
+
+    const { error: upErr } = await supabaseClient.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+    if(upErr){ showToast(upErr.message, 'danger'); return; }
+
+    const { data: { publicUrl } } = supabaseClient.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    document.getElementById('avatarPreview').src = publicUrl;
+
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update({ avatar: publicUrl })
+      .eq('id', currentUser.id);
+    if(error){ showToast(error.message, 'danger'); return; }
+
+    showToast('Avatar updated');
+  }
+}
+
+async function removeAvatar(){
+  const seed = encodeURIComponent(currentUser.name || 'User');
+  const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed='+seed;
+  document.getElementById('avatarPreview').src = defaultAvatar;
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ avatar: null })
+    .eq('id', currentUser.id);
+  if(error){ showToast(error.message, 'danger'); return; }
+
+  showToast('Avatar removed');
+}
+
+async function resetAccount(){
+  if(confirm('Discard unsaved changes?')) await loadAccountFields();
+}
+
+async function updatePassword(){
+  const c = document.getElementById('curPassword').value;
+  const n = document.getElementById('newPassword').value;
+  const cf = document.getElementById('confPassword').value;
+  if(!c||!n||!cf){ showToast('Fill all password fields','danger'); return; }
+  if(n.length<8){ showToast('Password must be 8+ characters','danger'); return; }
+  if(n!==cf){ showToast('Passwords do not match','danger'); return; }
+
+  const { error: signinError } = await supabaseClient.auth.signInWithPassword({
+    email: currentUser.email, password: c
+  });
+  if(signinError){ showToast('Current password is incorrect','danger'); return; }
+
+  const { error } = await supabaseClient.auth.updateUser({ password: n });
+  if(error){ showToast(error.message, 'danger'); return; }
+
+  document.getElementById('curPassword').value='';
+  document.getElementById('newPassword').value='';
+  document.getElementById('confPassword').value='';
+  document.getElementById('passwordStrength').textContent='';
+  showToast('Password updated');
+}
+
+function checkPasswordStrength(){
+  const p = document.getElementById('newPassword').value;
+  const ind = document.getElementById('passwordStrength');
+  let s = 0; if(p.length>=8) s++; if(/[A-Z]/.test(p)) s++; if(/[0-9]/.test(p)) s++; if(/[^A-Za-z0-9]/.test(p)) s++;
+  const colors=['var(--danger)','var(--warning)','var(--primary)','var(--success)'];
+  const labels=['Too weak','Weak','Good','Strong'];
+  if(!p){ ind.textContent=''; return; }
+  ind.textContent = `Strength: ${labels[Math.min(s,3)]}`;
+  ind.style.color = colors[Math.min(s,3)];
+}
+
+async function toggleTheme(){
+  const d = document.getElementById('toggleTheme').checked;
+  document.documentElement.setAttribute('data-theme', d?'dark':'light');
+  const prefs = {
+    user_id: currentUser.id,
+    dark: d,
+    updated_at: new Date().toISOString()
+  };
+  await supabaseClient.from('preferences').upsert(prefs, { onConflict: 'user_id' });
+}
+
+async function savePreferences(){
+  const prefs = {
+    user_id: currentUser.id,
+    lang: document.getElementById('prefLang').value,
+    zone: document.getElementById('prefZone').value,
+    dark: document.getElementById('toggleTheme').checked,
+    email: document.getElementById('toggleEmail').checked,
+    marketing: document.getElementById('toggleMarketing').checked,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await supabaseClient.from('preferences').upsert(prefs, { onConflict: 'user_id' });
+  if(error){ showToast(error.message, 'danger'); return; }
+  showToast('Preferences saved');
+}
+
+async function exportData(){
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('*').eq('id', currentUser.id).single();
+  const { data: prefs } = await supabaseClient
+    .from('preferences').select('*').eq('user_id', currentUser.id).single();
+
+  const data = {
+    user: { id: currentUser.id, email: currentUser.email, name: currentUser.name },
+    profile: profile || {},
+    preferences: prefs || {},
+    exportDate: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='my-data.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Data exported');
+}
+
+async function deleteAccount(){
+  if(confirm('⚠️ Are you sure? This cannot be undone.')){
+    const c = prompt('Type "DELETE" to confirm:');
+    if(c==='DELETE'){
+      await supabaseClient.from('profiles').delete().eq('id', currentUser.id);
+      await supabaseClient.from('preferences').delete().eq('user_id', currentUser.id);
+      await supabaseClient.auth.signOut();
+      showToast('Account deleted','danger');
+      setTimeout(()=>location.reload(), 1500);
+    } else { showToast('Deletion cancelled','danger'); }
+  }
+}
+
+function revokeSession(btn){
+  if(confirm('Revoke this session?')){
+    btn.closest('.session-item').remove();
+    showToast('Session revoked');
+  }
+}
+
+function revokeAllSessions(){
+  if(confirm('Log out all other devices?')){
+    document.querySelectorAll('.session-item').forEach(s=>{
+      if(!s.querySelector('.badge-green')) s.remove();
+    });
+    showToast('All other sessions revoked');
+  }
+}
+
+/* ===================== TOAST ===================== */
+let toastUndoFn = null;
+function showToast(msg, type='success', undoFn=null){
+  const t = document.getElementById('toast');
+  const m = document.getElementById('toastMsg');
+  const u = document.getElementById('toastUndo');
+  const p = document.getElementById('toastProgress');
+  m.textContent = msg;
+  t.style.background = type==='danger' ? 'var(--danger)' : 'var(--text)';
+  toastUndoFn = undoFn;
+  if(undoFn){
+    u.style.display = 'inline-block';
+    u.onclick = ()=>{ undoFn(); hideToast(); };
+  } else {
+    u.style.display = 'none';
+  }
+  p.style.animation = 'none';
+  p.offsetHeight;
+  p.style.animation = 'progress 5s linear forwards';
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(hideToast, 5000);
+}
+
+function hideToast(){
+  document.getElementById('toast').classList.remove('show');
+}
+
+/* ===================== UTILS ===================== */
+function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+function fmtDate(i){ const d=new Date(i); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function fmtSize(b){ if(b<1024) return b+' B'; if(b<1024*1024) return (b/1024).toFixed(1)+' KB'; return (b/(1024*1024)).toFixed(1)+' MB'; }
+
+/* ===================== KEYBOARD SHORTCUTS ===================== */
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA') return;
+  if(e.key==='/' && !e.ctrlKey && !e.metaKey){
+    e.preventDefault();
+    const s = document.getElementById('searchInput');
+    if(s){ s.focus(); s.select(); }
+  }
+  if(e.key==='Escape') closeModal();
+});
+
+/* ===================== INIT ===================== */
+(async function init(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(session){
+    currentUser = session.user;
+    await loadProfile();
+    enterApp();
+  }
+})();
+</script>
+</body>
+</html>
