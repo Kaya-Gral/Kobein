@@ -20,7 +20,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <title>Kobein</title>
 <link rel="stylesheet" href="style.css">
-
 </head>
 <body>
 <div class="offline-bar" id="offlineBar" data-i18n="offline">📡 You are offline</div>
@@ -45,8 +44,7 @@
 
 <!-- AUTH GATE -->
 <div id="authGate">
-  <div class="auth-box" style="position:relative;">
-    <div class="auth-tabs">
+  <div class="auth-box" style="position:relative;">    <div class="auth-tabs">
       <button class="auth-tab active" data-tab="signin" onclick="switchAuthTab('signin')" data-i18n="signIn">Sign In</button>      <button class="auth-tab" data-tab="signup" onclick="switchAuthTab('signup')">Sign Up</button>
     </div>
     <form id="signin" class="auth-form active" onsubmit="handleSignin(event)">
@@ -60,10 +58,6 @@
       <div class="input-group">
         <label data-i18n="password">Password</label>
 <input type="password" id="signinPassword" placeholder="••••••••" required>
-      </div>
-      <div class="checkbox-group">
-        <input type="checkbox" id="rememberMe">
-        <label for="rememberMe" data-i18n="rememberMe">Remember me</label>
       </div>
       <button type="submit" class="btn btn-primary" data-i18n="signIn">Sign In</button>
       <div class="forgot-password"><a href="#" onclick="showForgotPassword(event)" data-i18n="forgotPassword">Forgot your password?</a></div>
@@ -305,6 +299,7 @@
     </button>
   </nav>
 </div>
+
 <!-- READER MODAL -->
 <div class="modal-overlay" id="readerModal" onclick="onBackdropClick(event)" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal" onclick="event.stopPropagation()" id="readerModalBox">

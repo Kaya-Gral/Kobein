@@ -1,3 +1,4 @@
+
 const SUPABASE_URL = 'https://lvypldbozwzzzbicgddd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXBsZGJvend6enpiaWNnZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMjQxOTYsImV4cCI6MjEwMDkwMDE5Nn0.arSebpJ6HAPIbNwSoyGkMuBuy4wlh9ZOwsUUsdesLv8';
 if(!window.supabase){
@@ -630,8 +631,7 @@ const i18n = {
     saved:'Saved',refresh:'Refresh',browseNotes:'Browse Notes',
     welcomeBack:'Welcome back',signInPortal:'Sign in to access your portal',
     createAccount:'Create account',getStarted:'Get started with Kobein',
-    fullName:'Full Name',email:'Email',password:'Password',confirmPassword:'Confirm Password',
-    rememberMe:'Remember me',forgotPassword:'Forgot your password?',
+    fullName:'Full Name',email:'Email',password:'Password',confirmPassword:'Confirm Password',forgotPassword:'Forgot your password?',
     signIn:'Sign In',createAccountBtn:'Create Account',
     terms:'<span data-i18n="terms">By signing up, you agree to our</span>',termsLink:'Terms',and:'and',privacyLink:'Privacy Policy',
     logout:'Logout',saveChanges:'Save Changes',back:'Back',changePhoto:'Change Photo',
@@ -661,8 +661,7 @@ const i18n = {
     saved:'Enregistrée',refresh:'Actualiser',browseNotes:'Parcourir',
     welcomeBack:'Bon retour',signInPortal:'Connectez-vous pour accéder à votre portail',
     createAccount:'Créer un compte',getStarted:'Commencez avec Kobein',
-    fullName:'Nom complet',email:'E-mail',password:'Mot de passe',confirmPassword:'Confirmer le mot de passe',
-    rememberMe:'Se souvenir de moi',forgotPassword:'Mot de passe oublié ?',
+    fullName:'Nom complet',email:'E-mail',password:'Mot de passe',confirmPassword:'Confirmer le mot de passe',forgotPassword:'Mot de passe oublié ?',
     signIn:'Se connecter',createAccountBtn:'Créer un compte',
     terms:"En vous inscrivant, vous acceptez nos",termsLink:'Conditions',and:'et',privacyLink:'Politique de confidentialité',
     logout:'Déconnexion',saveChanges:'Enregistrer',back:'Retour',changePhoto:'Changer la photo',
@@ -724,16 +723,17 @@ window.addEventListener('offline', updateOfflineBar);
 (async function init(){
   updateOfflineBar();
 
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
   // Check for password recovery token in URL
   const hash = window.location.hash;
   const params = new URLSearchParams(hash.replace('#', '?'));
-  if(params.get('type') === 'recovery'){
+  if(params.get('type') === 'recovery' && session){
     document.getElementById('authGate').style.display='none';
     document.getElementById('resetView').style.display='flex';
     return;
   }
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
   if(session){
     currentUser = session.user;
     await loadProfile();
