@@ -690,7 +690,8 @@ input:focus+.slider{box-shadow:0 0 0 3px var(--primary-light);}
 
 <!-- AUTH GATE -->
 <div id="authGate">
-  <div class="auth-box">
+  <div class="auth-box" style="position:relative;">
+  <div style="position:absolute;top:12px;right:12px;font-size:10px;font-weight:700;color:var(--primary);opacity:0.6;background:var(--primary-light);padding:2px 8px;border-radius:10px;letter-spacing:0.5px;z-index:10;">v2.1</div>
     <div class="auth-tabs">
       <button class="auth-tab active" data-tab="signin" onclick="switchAuthTab('signin')" data-i18n="signIn">Sign In</button>      <button class="auth-tab" data-tab="signup" onclick="switchAuthTab('signup')">Sign Up</button>
     </div>
@@ -976,14 +977,18 @@ input:focus+.slider{box-shadow:0 0 0 3px var(--primary-light);}
 <script>
 const SUPABASE_URL = 'https://lvypldbozwzzzbicgddd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXBsZGJvend6enpiaWNnZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMjQxOTYsImV4cCI6MjEwMDkwMDE5Nn0.arSebpJ6HAPIbNwSoyGkMuBuy4wlh9ZOwsUUsdesLv8';
+if(!window.supabase){
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;padding:20px;text-align:center;font-family:sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);"><div style="background:white;padding:36px;border-radius:20px;box-shadow:0 25px 80px rgba(0,0,0,0.35);max-width:440px;width:100%;"><h2 style="color:#0f172a;margin-bottom:8px;font-size:24px;">Loading Failed</h2><p style="color:#64748b;font-size:15px;line-height:1.5;">Required libraries could not load. Please open this page in <strong>Chrome</strong>, <strong>Safari</strong>, or your device\'s default browser instead of an in-app preview.</p></div></div>';
+  throw new Error('Supabase library failed to load');
+}
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let notes = [];
 let currentUser = null;
 let currentOpenNoteId = null;
-function recentKey(){ return 'sp_recent_' + (currentUser?.id || 'guest'); }
-function savedKey(){ return 'sp_saved_' + (currentUser?.id || 'guest'); }
-function visitKey(){ return 'sp_visit_' + (currentUser?.id || 'guest'); }
+function recentKey(){ return 'sp_recent_' + ((currentUser && currentUser.id) || 'guest'); }
+function savedKey(){ return 'sp_saved_' + ((currentUser && currentUser.id) || 'guest'); }
+function visitKey(){ return 'sp_visit_' + ((currentUser && currentUser.id) || 'guest'); }
 function getLastVisit(){ return parseInt(localStorage.getItem(visitKey()) || '0'); }
 function setLastVisit(){ localStorage.setItem(visitKey(), Date.now().toString()); }
 function isNewNote(createdAt){ return new Date(createdAt).getTime() > getLastVisit(); }
@@ -1168,7 +1173,7 @@ async function loadProfile(){
     .single();
   if(data){
     currentUser.profile = data;
-    currentUser.name = data.name || currentUser.user_metadata?.name || '';
+    currentUser.name = data.name || (currentUser.user_metadata && currentUser.user_metadata.name) || '';
   }
 }
 async function enterApp(){
@@ -1177,11 +1182,11 @@ async function enterApp(){
 
   await loadNotes();
 
-  const avatarUrl = currentUser?.profile?.avatar || getAvatarUrl(currentUser.name || 'User');
+  const avatarUrl = (currentUser && currentUser.profile && currentUser.profile.avatar) || getAvatarUrl(currentUser.name || 'User');
   document.getElementById('meAvatar').src = avatarUrl;
   document.getElementById('manageAvatar').src = avatarUrl;
 
-  document.getElementById('meName').textContent = currentUser.name || currentUser.email?.split('@')[0] || 'User';
+  document.getElementById('meName').textContent = currentUser.name || (currentUser.email && currentUser.email.split('@')[0]) || 'User';
   document.getElementById('meEmail').textContent = currentUser.email || '';
 
   document.getElementById('manageName').value = currentUser.name || '';
@@ -1269,7 +1274,7 @@ function renderNotes(){
         <span>${escapeHtml(n.author_name||'Teacher')}</span>
       </div>
       <div class="note-excerpt">${escapeHtml(n.content.substring(0,140))}...</div>
-      <div class="note-meta"><span>${fmtDate(n.created_at)}</span><span>${fmtSize(n.size || n.content?.length || 0)}</span></div>
+      <div class="note-meta"><span>${fmtDate(n.created_at)}</span><span>${fmtSize(n.size || (n.content && n.content.length) || 0)}</span></div>
     </div>
   `).join('');
 }
@@ -1391,7 +1396,7 @@ function openNote(id){
   const overlay = document.getElementById('readerModal');
   overlay.classList.add('active');
   document.body.style.overflow='hidden';
-  document.querySelector('.bottom-nav')?.classList.add('hidden');
+  var _bn=document.querySelector('.bottom-nav');if(_bn)_bn.classList.add('hidden');
 
   setTimeout(()=>{
     const modal = document.getElementById('readerModalBox');
@@ -1424,7 +1429,7 @@ function closeModal(){
   if(focusTrapHandler) modal.removeEventListener('keydown', focusTrapHandler);
   document.getElementById('modalBody').onscroll = null;
   currentOpenNoteId = null;
-  setTimeout(()=> document.querySelector('.bottom-nav')?.classList.remove('hidden'), 100);
+  setTimeout(()=> {var _bn2=document.querySelector('.bottom-nav');if(_bn2)_bn2.classList.remove('hidden');}, 100);
 }
 
 function onBackdropClick(e){ if(e.target===e.currentTarget) closeModal(); }
@@ -1532,7 +1537,7 @@ async function saveManageAccount(){
   currentUser.name = name;
   document.getElementById('meName').textContent = name;
 
-  const newAvatar = currentUser.profile?.avatar || getAvatarUrl(name);
+  const newAvatar = (currentUser.profile && currentUser.profile.avatar) || getAvatarUrl(name);
   document.getElementById('meAvatar').src = newAvatar;
 
   showToast(t('accountUpdated'));
@@ -1654,12 +1659,12 @@ const i18n = {
 };
 
 let currentLang = 'en';
-function t(key){ return i18n[currentLang]?.[key] || i18n.en[key] || key; }
+function t(key){ return (i18n[currentLang] && i18n[currentLang][key]) || i18n.en[key] || key; }
 
 function applyTranslation(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     const key = el.getAttribute('data-i18n');
-    if(i18n[currentLang]?.[key]) el.textContent = i18n[currentLang][key];
+    if((i18n[currentLang] && i18n[currentLang][key])) el.textContent = i18n[currentLang][key];
   });
   // Update placeholders
   const searchInput = document.getElementById('searchInput');
