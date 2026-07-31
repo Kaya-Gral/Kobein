@@ -1,11 +1,13 @@
-
 const SUPABASE_URL = 'https://lvypldbozwzzzbicgddd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXBsZGJvend6enpiaWNnZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMjQxOTYsImV4cCI6MjEwMDkwMDE5Nn0.arSebpJ6HAPIbNwSoyGkMuBuy4wlh9ZOwsUUsdesLv8';
-if(!window.supabase){
-  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;padding:20px;text-align:center;font-family:sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);"><div style="background:white;padding:36px;border-radius:20px;box-shadow:0 25px 80px rgba(0,0,0,0.35);max-width:440px;width:100%;"><h2 style="color:#0f172a;margin-bottom:8px;font-size:24px;">Loading Failed</h2><p style="color:#64748b;font-size:15px;line-height:1.5;">Required libraries could not load. Please open this page in <strong>Chrome</strong>, <strong>Safari</strong>, or your device\'s default browser instead of an in-app preview.</p></div></div>';
-  throw new Error('Supabase library failed to load');
+
+// Graceful fallback if Supabase library fails to load
+let supabaseClient = null;
+if (window.supabase && window.supabase.createClient) {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+  location.reload();
 }
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let notes = [];
 let currentUser = null;
@@ -61,7 +63,8 @@ function setInputStatus(input, iconEl, hintEl, isValid, msg){
   if(msg === '') return;
   input.classList.add(isValid ? 'valid' : 'invalid');
   iconEl.textContent = isValid ? '✅' : '❌';
-  iconEl.classList.add('show');  if(hintEl){
+  iconEl.classList.add('show');
+  if(hintEl){
     hintEl.textContent = msg;
     hintEl.className = 'input-hint ' + (isValid ? 'valid' : 'invalid');
   }
@@ -123,6 +126,7 @@ function checkSignupReady(){
 
 async function handleForgotPassword(e){
   e.preventDefault();
+  if(!supabaseClient){ showToast('Service unavailable. Please try again later.', 'danger'); return; }
   const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin + window.location.pathname
@@ -134,6 +138,7 @@ async function handleForgotPassword(e){
 
 async function handleResetPassword(e){
   e.preventDefault();
+  if(!supabaseClient){ showToast('Service unavailable. Please try again later.', 'danger'); return; }
   const pass = document.getElementById('resetPassword').value;
   const confirm = document.getElementById('resetConfirm').value;
   if(pass !== confirm){ showToast(t('passwordsMatch') || 'Passwords do not match', 'danger'); return; }
@@ -148,6 +153,7 @@ async function handleResetPassword(e){
 
 async function handleSignup(e){
   e.preventDefault();
+  if(!supabaseClient){ showToast('Service unavailable. Please try again later.', 'danger'); return; }
   const name = document.getElementById('signupName').value.trim();
   const email = document.getElementById('signupEmail').value.trim().toLowerCase();
   const pass = document.getElementById('signupPassword').value;
@@ -171,6 +177,7 @@ async function handleSignup(e){
 
 async function handleSignin(e){
   e.preventDefault();
+  if(!supabaseClient){ showToast('Service unavailable. Please try again later.', 'danger'); return; }
   const email = document.getElementById('signinEmail').value.trim().toLowerCase();
   const pass = document.getElementById('signinPassword').value;
 
@@ -183,13 +190,13 @@ async function handleSignin(e){
 }
 
 async function logout(){
-  await supabaseClient.auth.signOut();
+  if(supabaseClient) await supabaseClient.auth.signOut();
   currentUser = null;
   location.reload();
 }
 
 async function loadProfile(){
-  if(!currentUser) return;
+  if(!currentUser || !supabaseClient) return;
   const { data } = await supabaseClient
     .from('profiles')
     .select('*')
@@ -237,6 +244,7 @@ async function enterApp(){
 }
 
 async function loadNotes(){
+  if(!supabaseClient) return;
   const { data, error } = await supabaseClient
     .from('notes')
     .select('*')
@@ -371,7 +379,7 @@ function saveCurrentNote(){
     saveBtn.onclick = null;
     saveBtn.style.cursor = 'default';
     saveBtn.style.opacity = '0.7';
-saveBtn.style.transform = 'scale(1.2)';
+    saveBtn.style.transform = 'scale(1.2)';
     setTimeout(()=> saveBtn.style.transform = 'scale(1)', 250);
   }
   showToast(t('noteSaved'));
@@ -401,7 +409,8 @@ function openNote(id){
   body.textContent = n.content;
   body.scrollTop = 0;
   document.getElementById('readingProgress').style.width='0%';
-  const saved = getSaved();  const saveBtn = document.querySelector('.modal-actions .btn-ghost');
+  const saved = getSaved();
+  const saveBtn = document.querySelector('.modal-actions .btn-ghost');
   if(saveBtn){
     if(saved.includes(id)){
       saveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
@@ -519,6 +528,7 @@ function showManageAccount(){
 
 /* ===================== MANAGE ACCOUNT ===================== */
 async function previewAvatar(input){
+  if(!supabaseClient){ showToast('Service unavailable. Please try again later.', 'danger'); return; }
   if(input.files && input.files[0]){
     const file = input.files[0];
     const filePath = `avatars/${currentUser.id}/${Date.now()}_${file.name}`;
@@ -548,7 +558,7 @@ async function previewAvatar(input){
 }
 
 async function saveManageAccount(){
-  if(!currentUser) return;
+  if(!currentUser || !supabaseClient) return;
   const name = document.getElementById('manageName').value.trim();
   if(!name){ showToast(t('nameRequired'),'danger'); return; }
 
@@ -631,7 +641,8 @@ const i18n = {
     saved:'Saved',refresh:'Refresh',browseNotes:'Browse Notes',
     welcomeBack:'Welcome back',signInPortal:'Sign in to access your portal',
     createAccount:'Create account',getStarted:'Get started with Kobein',
-    fullName:'Full Name',email:'Email',password:'Password',confirmPassword:'Confirm Password',forgotPassword:'Forgot your password?',
+    fullName:'Full Name',email:'Email',password:'Password',confirmPassword:'Confirm Password',
+    rememberMe:'Remember me',forgotPassword:'Forgot your password?',
     signIn:'Sign In',createAccountBtn:'Create Account',
     terms:'<span data-i18n="terms">By signing up, you agree to our</span>',termsLink:'Terms',and:'and',privacyLink:'Privacy Policy',
     logout:'Logout',saveChanges:'Save Changes',back:'Back',changePhoto:'Change Photo',
@@ -661,7 +672,8 @@ const i18n = {
     saved:'Enregistrée',refresh:'Actualiser',browseNotes:'Parcourir',
     welcomeBack:'Bon retour',signInPortal:'Connectez-vous pour accéder à votre portail',
     createAccount:'Créer un compte',getStarted:'Commencez avec Kobein',
-    fullName:'Nom complet',email:'E-mail',password:'Mot de passe',confirmPassword:'Confirmer le mot de passe',forgotPassword:'Mot de passe oublié ?',
+    fullName:'Nom complet',email:'E-mail',password:'Mot de passe',confirmPassword:'Confirmer le mot de passe',
+    rememberMe:'Se souvenir de moi',forgotPassword:'Mot de passe oublié ?',
     signIn:'Se connecter',createAccountBtn:'Créer un compte',
     terms:"En vous inscrivant, vous acceptez nos",termsLink:'Conditions',and:'et',privacyLink:'Politique de confidentialité',
     logout:'Déconnexion',saveChanges:'Enregistrer',back:'Retour',changePhoto:'Changer la photo',
@@ -723,17 +735,21 @@ window.addEventListener('offline', updateOfflineBar);
 (async function init(){
   updateOfflineBar();
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
-
   // Check for password recovery token in URL
   const hash = window.location.hash;
   const params = new URLSearchParams(hash.replace('#', '?'));
-  if(params.get('type') === 'recovery' && session){
+  if(params.get('type') === 'recovery'){
     document.getElementById('authGate').style.display='none';
     document.getElementById('resetView').style.display='flex';
     return;
   }
 
+  if(!supabaseClient){
+    // Supabase didn't load — auth gate error overlay already shown in HTML
+    return;
+  }
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if(session){
     currentUser = session.user;
     await loadProfile();
