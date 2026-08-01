@@ -127,6 +127,12 @@ function checkSignupReady(){
 async function handleForgotPassword(e){
   e.preventDefault();
   if(!supabaseClient){ showToast('Service unavailable. Please try again later.', 'danger'); return; }
+
+  if(window.location.protocol === 'file:'){
+    showToast('Password reset requires a web server. Host this app on a URL (e.g. Netlify, GitHub Pages, or VS Code Live Server).', 'danger');
+    return;
+  }
+
   const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin + window.location.pathname
@@ -143,9 +149,16 @@ async function handleResetPassword(e){
   const confirm = document.getElementById('resetConfirm').value;
   if(pass !== confirm){ showToast(t('passwordsMatch') || 'Passwords do not match', 'danger'); return; }
   if(pass.length < 8){ showToast(t('passwordMin') || 'Password must be at least 8 characters', 'danger'); return; }
+
   const { error } = await supabaseClient.auth.updateUser({ password: pass });
   if(error){ showToast(error.message, 'danger'); return; }
+
   showToast(t('passwordUpdated') || 'Password updated! Please sign in.');
+
+  // Clean up: remove recovery hash from URL and sign out the temporary session
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  try { await supabaseClient.auth.signOut(); } catch(e){}
+
   document.getElementById('resetView').style.display='none';
   document.getElementById('authGate').style.display='flex';
   showAuthForm('signin');
@@ -940,21 +953,25 @@ window.addEventListener('offline', updateOfflineBar);
 (async function init(){
   updateOfflineBar();
 
-  // Check for password recovery token in URL
-  const hash = window.location.hash;
-  const params = new URLSearchParams(hash.replace('#', '?'));
-  if(params.get('type') === 'recovery'){
-    document.getElementById('authGate').style.display='none';
-    document.getElementById('resetView').style.display='flex';
-    return;
-  }
-
   if(!supabaseClient){
     // Supabase didn't load — auth gate error overlay already shown in HTML
     return;
   }
 
+  // Capture recovery flag BEFORE getSession() processes (and possibly removes) the hash
+  const hash = window.location.hash;
+  const params = new URLSearchParams(hash.replace('#', '?'));
+  const isRecovery = params.get('type') === 'recovery';
+
+  // Let Supabase process any auth hash (recovery token, OAuth, etc.) to establish a session
   const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if(isRecovery){
+    document.getElementById('authGate').style.display='none';
+    document.getElementById('resetView').style.display='flex';
+    return;
+  }
+
   if(session){
     currentUser = session.user;
     await loadProfile();
