@@ -57,7 +57,6 @@
         <button class="btn btn-primary" style="width:100%;" onclick="location.reload()">Retry Connection</button>
       </div>
     </div>
-    <div style="position:absolute;top:12px;right:12px;font-size:10px;font-weight:700;color:var(--primary);opacity:0.6;background:var(--primary-light);padding:2px 8px;border-radius:10px;letter-spacing:0.5px;z-index:10;">v2.1</div>
     <div class="auth-tabs">
       <button class="auth-tab active" data-tab="signin" onclick="switchAuthTab('signin')" data-i18n="signIn">Sign In</button>
       <button class="auth-tab" data-tab="signup" onclick="switchAuthTab('signup')">Sign Up</button>
@@ -73,10 +72,6 @@
       <div class="input-group">
         <label data-i18n="password">Password</label>
         <input type="password" id="signinPassword" placeholder="••••••••" required>
-      </div>
-      <div class="checkbox-group">
-        <input type="checkbox" id="rememberMe">
-        <label for="rememberMe" data-i18n="rememberMe">Remember me</label>
       </div>
       <button type="submit" class="btn btn-primary" data-i18n="signIn">Sign In</button>
       <div class="forgot-password"><a href="#" onclick="showForgotPassword(event)" data-i18n="forgotPassword">Forgot your password?</a></div>
