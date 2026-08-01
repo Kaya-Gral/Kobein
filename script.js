@@ -433,7 +433,7 @@ function removeSavedNote(id){
 /* ===================== READER MODAL ===================== */
 let focusTrapHandler = null;
 
-function openNote(id){
+function openNote(id, skipModalOpen = false){
   currentOpenNoteId = id;
   const n = notes.find(x=>x.id===id);
   if(!n) return;
@@ -459,74 +459,44 @@ function openNote(id){
     }
   }
 
-  // Back button when coming from a course
-  const modalActions = document.querySelector('.modal-actions');
-  let backBtn = document.getElementById('courseBackBtn');
-  if(!backBtn && modalActions){
-    backBtn = document.createElement('button');
-    backBtn.id = 'courseBackBtn';
-    backBtn.className = 'btn btn-ghost';
-    backBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`;
-    backBtn.title = 'Back to course';
-    backBtn.style.display = 'none';
-    modalActions.insertBefore(backBtn, modalActions.firstChild);
-  }
-  if(backBtn){
-    if(courseContext){
-      backBtn.style.display = 'inline-flex';
-      backBtn.onclick = () => {
-        currentOpenNoteId = null;
-        openCourse(courseContext);
+
+  if(!skipModalOpen){
+    const overlay = document.getElementById('readerModal');
+    overlay.classList.add('active');
+    document.body.style.overflow='hidden';
+    var _bn=document.querySelector('.bottom-nav');if(_bn)_bn.classList.add('hidden');
+
+    setTimeout(()=>{
+      const modal = document.getElementById('readerModalBox');
+      const focusables = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+      if(focusables.length) focusables[0].focus();
+      focusTrapHandler = (e)=>{
+        if(e.key!=='Tab') return;
+        const first = focusables[0], last = focusables[focusables.length-1];
+        if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
+        else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
       };
-    } else {
-      backBtn.style.display = 'none';
-    }
+      modal.addEventListener('keydown', focusTrapHandler);
+    }, 50);
+
+    initSwipeToClose();
   }
-  const overlay = document.getElementById('readerModal');
-  overlay.classList.add('active');
-  document.body.style.overflow='hidden';
-  var _bn=document.querySelector('.bottom-nav');if(_bn)_bn.classList.add('hidden');
 
-  setTimeout(()=>{
-    const modal = document.getElementById('readerModalBox');
-    const focusables = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
-    if(focusables.length) focusables[0].focus();
-    focusTrapHandler = (e)=>{
-      if(e.key!=='Tab') return;
-      const first = focusables[0], last = focusables[focusables.length-1];
-      if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
-      else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
-    };
-    modal.addEventListener('keydown', focusTrapHandler);
-
-    const body = document.getElementById('modalBody');
-    body.onscroll = ()=>{
-      const pct = body.scrollTop / (body.scrollHeight - body.clientHeight);
-      document.getElementById('readingProgress').style.width = Math.min(100, pct*100)+'%';
-    };
-  }, 50);
-
-  initSwipeToClose();
+  // Always set up scroll progress for note reading
+  body.onscroll = ()=>{
+    const pct = body.scrollTop / (body.scrollHeight - body.clientHeight);
+    document.getElementById('readingProgress').style.width = Math.min(100, pct*100)+'%';
+  };
 }
 
 function closeModal(){
   const overlay = document.getElementById('readerModal');
   const modal = document.getElementById('readerModalBox');
 
-  // If closing a note that was opened from a course, return to course list
+  // If closing a note that was opened from a course, swap back to course list (keep modal open)
   if(currentOpenNoteId && courseContext){
-    overlay.classList.remove('active');
-    modal.style.transform = '';
-    document.body.style.overflow='';
-    if(focusTrapHandler) modal.removeEventListener('keydown', focusTrapHandler);
-    document.getElementById('modalBody').onscroll = null;
     currentOpenNoteId = null;
-    const backBtn = document.getElementById('courseBackBtn');
-    if(backBtn) backBtn.style.display = 'none';
-    // Reopen course list after modal close animation
-    setTimeout(()=>{
-      openCourse(courseContext);
-    }, 300);
+    openCourse(courseContext, true);
     return;
   }
 
@@ -538,8 +508,6 @@ function closeModal(){
   document.getElementById('modalBody').onscroll = null;
   currentOpenNoteId = null;
   courseContext = null;
-  const backBtn = document.getElementById('courseBackBtn');
-  if(backBtn) backBtn.style.display = 'none';
   setTimeout(()=> {var _bn2=document.querySelector('.bottom-nav');if(_bn2)_bn2.classList.remove('hidden');}, 100);
 }
 
@@ -587,7 +555,7 @@ function initSwipeToClose(){
 }
 
 /* ===================== COURSE MODAL ===================== */
-function openCourse(course){
+function openCourse(course, skipModalOpen = false){
   if(!course || !course.notes) return;
   courseContext = course;
 
@@ -598,7 +566,7 @@ function openCourse(course){
   body.innerHTML = `
     <div class="course-notes-list">
       ${course.notes.map((n, i) => `
-        <div class="course-note-item" onclick="openNote('${n.id}')" style="animation-delay:${i * 0.03}s;">
+        <div class="course-note-item" onclick="openNote('${n.id}', true)" style="animation-delay:${i * 0.03}s;">
           <div class="course-note-number">${String(i + 1).padStart(2, '0')}</div>
           <div class="course-note-info">
             <div class="course-note-title">${escapeHtml(getNoteName(n.title))}</div>
@@ -630,25 +598,27 @@ function openCourse(course){
     }
   }
 
-  const overlay = document.getElementById('readerModal');
-  overlay.classList.add('active');
-  document.body.style.overflow='hidden';
-  var _bn=document.querySelector('.bottom-nav');if(_bn)_bn.classList.add('hidden');
+  if(!skipModalOpen){
+    const overlay = document.getElementById('readerModal');
+    overlay.classList.add('active');
+    document.body.style.overflow='hidden';
+    var _bn=document.querySelector('.bottom-nav');if(_bn)_bn.classList.add('hidden');
 
-  setTimeout(()=>{
-    const modal = document.getElementById('readerModalBox');
-    const focusables = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
-    if(focusables.length) focusables[0].focus();
-    focusTrapHandler = (e)=>{
-      if(e.key!=='Tab') return;
-      const first = focusables[0], last = focusables[focusables.length-1];
-      if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
-      else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
-    };
-    modal.addEventListener('keydown', focusTrapHandler);
-  }, 50);
+    setTimeout(()=>{
+      const modal = document.getElementById('readerModalBox');
+      const focusables = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+      if(focusables.length) focusables[0].focus();
+      focusTrapHandler = (e)=>{
+        if(e.key!=='Tab') return;
+        const first = focusables[0], last = focusables[focusables.length-1];
+        if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
+        else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
+      };
+      modal.addEventListener('keydown', focusTrapHandler);
+    }, 50);
 
-  initSwipeToClose();
+    initSwipeToClose();
+  }
 }
 
 function saveCurrentCourse(course){
@@ -921,7 +891,7 @@ function groupByCourse(noteList) {
     }
   });
   Object.values(map).forEach(c => {
-    c.notes.sort((a, b) => getNoteName(a.title).localeCompare(getNoteName(b.title)));
+    c.notes.sort((a, b) => getNoteName(a.title).localeCompare(getNoteName(b.title), undefined, {numeric: true, sensitivity: 'base'}));
   });
   return Object.values(map).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
