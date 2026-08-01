@@ -290,23 +290,29 @@ function renderNotes(){
   const q = document.getElementById('searchInput').value.toLowerCase();
   const g = document.getElementById('notesGrid');
   const e = document.getElementById('emptyState');
-  let f = notes.filter(n=>{
+
+  let filtered = notes.filter(n=>{
     const m = n.title.toLowerCase().includes(q) || n.subject.toLowerCase().includes(q);
     return m && (currentFilter==='all' || n.subject===currentFilter);
-  }).sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
+  });
 
-  if(f.length===0){ g.style.display='none'; e.style.display='block'; return; }
+  let courses = groupByCourse(filtered);
+  window._courseCache = courses;
+
+  if(courses.length===0){ g.style.display='none'; e.style.display='block'; return; }
   g.style.display='grid'; e.style.display='none';
-  g.innerHTML = f.map(n=>`
-    <div class="note-card" onclick="openNote('${n.id}')" style="position:relative;">
-      <span class="note-subject ${subjectClass(n.subject)}">${n.subject}${isNewNote(n.created_at)?'<span class="note-new-dot"></span>':''}</span>
-      <div class="note-title">${escapeHtml(n.title)}</div>
+  g.innerHTML = courses.map((c, idx)=>`
+    <div class="note-card course-card" data-course-idx="${idx}" onclick="openCourse(window._courseCache[${idx}])" style="position:relative;animation-delay:${idx * 0.05}s;">
+      <span class="note-subject ${subjectClass(c.subject)}">${c.subject}${isNewNote(c.created_at)?'<span class="note-new-dot"></span>':''}</span>
+      <div class="note-title">${escapeHtml(c.name)}</div>
       <div class="note-author">
-        <img src="${getAvatarUrl(n.author_name||'Teacher', 40)}" alt="">
-        <span>${escapeHtml(n.author_name||'Teacher')}</span>
+        <img src="${getAvatarUrl(c.author_name||'Teacher', 40)}" alt="">
+        <span>${escapeHtml(c.author_name||'Teacher')}</span>
       </div>
-      <div class="note-excerpt">${escapeHtml(n.content.substring(0,140))}...</div>
-      <div class="note-meta"><span>${fmtDate(n.created_at)}</span><span>${fmtSize(n.size || (n.content && n.content.length) || 0)}</span></div>
+      <div class="course-meta">
+        <span class="course-note-count">${c.notes.length} note${c.notes.length !== 1 ? 's' : ''}</span>
+        <span class="course-date">${fmtDate(c.created_at)}</span>
+      </div>
     </div>
   `).join('');
 }
@@ -349,18 +355,34 @@ function renderSaved(){
 
   if(savedNotes.length===0){ g.style.display='none'; e.style.display='block'; return; }
   g.style.display='grid'; e.style.display='none';
-  g.innerHTML = savedNotes.map(n=>`
-    <div class="note-card" onclick="openNote('${n.id}')" style="position:relative;">
-      <span class="note-subject ${subjectClass(n.subject)}">${n.subject}${isNewNote(n.created_at)?'<span class="note-new-dot"></span>':''}</span>
-      <div class="note-title">${escapeHtml(n.title)}</div>
-      <div class="note-author">
-        <img src="${getAvatarUrl(n.author_name||'Teacher', 40)}" alt="">
-        <span>${escapeHtml(n.author_name||'Teacher')}</span>
+
+  const savedCourses = groupByCourse(savedNotes);
+  window._savedCourseCache = savedCourses;
+
+  g.innerHTML = `
+    <div class="saved-courses-section" style="grid-column:1/-1;">
+      <h3 class="saved-courses-heading">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        Saved Courses
+      </h3>
+      <div class="saved-courses-grid">
+        ${savedCourses.map((c, idx)=>`
+          <div class="note-card course-card saved-course-card" data-saved-course-idx="${idx}" onclick="openCourse(window._savedCourseCache[${idx}])" style="position:relative;animation-delay:${idx * 0.05}s;">
+            <span class="note-subject ${subjectClass(c.subject)}">${c.subject}${isNewNote(c.created_at)?'<span class="note-new-dot"></span>':''}</span>
+            <div class="note-title">${escapeHtml(c.name)}</div>
+            <div class="note-author">
+              <img src="${getAvatarUrl(c.author_name||'Teacher', 40)}" alt="">
+              <span>${escapeHtml(c.author_name||'Teacher')}</span>
+            </div>
+            <div class="course-meta">
+              <span class="course-note-count">${c.notes.length} note${c.notes.length !== 1 ? 's' : ''}</span>
+              <span class="course-date">${fmtDate(c.created_at)}</span>
+            </div>
+          </div>
+        `).join('')}
       </div>
-      <div class="note-excerpt">${escapeHtml(n.content.substring(0,140))}...</div>
-      <div class="note-meta"><span>${fmtDate(n.created_at)}</span><span>Saved</span></div>
     </div>
-  `).join('');
+  `;
 }
 
 function saveCurrentNote(){
@@ -413,17 +435,38 @@ function openNote(id){
   const saveBtn = document.querySelector('.modal-actions .btn-ghost');
   if(saveBtn){
     if(saved.includes(id)){
-      saveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-      saveBtn.title = 'Saved';
-      saveBtn.onclick = null;
-      saveBtn.style.cursor = 'default';
-      saveBtn.style.opacity = '0.7';
+      saveBtn.style.display = 'none';
     } else {
+      saveBtn.style.display = 'inline-flex';
       saveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
       saveBtn.title = 'Save offline';
       saveBtn.onclick = ()=>saveCurrentNote();
       saveBtn.style.cursor = 'pointer';
       saveBtn.style.opacity = '1';
+    }
+  }
+
+  // Back button when coming from a course
+  const modalActions = document.querySelector('.modal-actions');
+  let backBtn = document.getElementById('courseBackBtn');
+  if(!backBtn && modalActions){
+    backBtn = document.createElement('button');
+    backBtn.id = 'courseBackBtn';
+    backBtn.className = 'btn btn-ghost';
+    backBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`;
+    backBtn.title = 'Back to course';
+    backBtn.style.display = 'none';
+    modalActions.insertBefore(backBtn, modalActions.firstChild);
+  }
+  if(backBtn){
+    if(courseContext){
+      backBtn.style.display = 'inline-flex';
+      backBtn.onclick = () => {
+        currentOpenNoteId = null;
+        openCourse(courseContext);
+      };
+    } else {
+      backBtn.style.display = 'none';
     }
   }
   const overlay = document.getElementById('readerModal');
@@ -456,12 +499,34 @@ function openNote(id){
 function closeModal(){
   const overlay = document.getElementById('readerModal');
   const modal = document.getElementById('readerModalBox');
+
+  // If closing a note that was opened from a course, return to course list
+  if(currentOpenNoteId && courseContext){
+    overlay.classList.remove('active');
+    modal.style.transform = '';
+    document.body.style.overflow='';
+    if(focusTrapHandler) modal.removeEventListener('keydown', focusTrapHandler);
+    document.getElementById('modalBody').onscroll = null;
+    currentOpenNoteId = null;
+    const backBtn = document.getElementById('courseBackBtn');
+    if(backBtn) backBtn.style.display = 'none';
+    // Reopen course list after modal close animation
+    setTimeout(()=>{
+      openCourse(courseContext);
+    }, 300);
+    return;
+  }
+
+  // Normal close (course list or standalone note)
   overlay.classList.remove('active');
   modal.style.transform = '';
   document.body.style.overflow='';
   if(focusTrapHandler) modal.removeEventListener('keydown', focusTrapHandler);
   document.getElementById('modalBody').onscroll = null;
   currentOpenNoteId = null;
+  courseContext = null;
+  const backBtn = document.getElementById('courseBackBtn');
+  if(backBtn) backBtn.style.display = 'none';
   setTimeout(()=> {var _bn2=document.querySelector('.bottom-nav');if(_bn2)_bn2.classList.remove('hidden');}, 100);
 }
 
@@ -507,6 +572,100 @@ function initSwipeToClose(){
   body.ontouchmove = null;
   body.ontouchend = null;
 }
+
+/* ===================== COURSE MODAL ===================== */
+function openCourse(course){
+  if(!course || !course.notes) return;
+  courseContext = course;
+
+  document.getElementById('modalTitle').textContent = course.name;
+  document.getElementById('modalMeta').textContent = `${course.subject} • ${course.author_name||'Teacher'}`;
+
+  const body = document.getElementById('modalBody');
+  body.innerHTML = `
+    <div class="course-notes-list">
+      ${course.notes.map((n, i) => `
+        <div class="course-note-item" onclick="openNote('${n.id}')" style="animation-delay:${i * 0.03}s;">
+          <div class="course-note-number">${String(i + 1).padStart(2, '0')}</div>
+          <div class="course-note-info">
+            <div class="course-note-title">${escapeHtml(getNoteName(n.title))}</div>
+            <div class="course-note-meta">${fmtDate(n.created_at)} • ${fmtSize(n.size)}</div>
+          </div>
+          <svg class="course-note-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  body.scrollTop = 0;
+  body.onscroll = null;
+  document.getElementById('readingProgress').style.width='0%';
+
+  const saved = getSaved();
+  const saveBtn = document.querySelector('.modal-actions .btn-ghost');
+  if(saveBtn){
+    const courseNoteIds = course.notes.map(n => n.id);
+    const allSaved = courseNoteIds.every(id => saved.includes(id));
+    if(allSaved){
+      saveBtn.style.display = 'none';
+    } else {
+      saveBtn.style.display = 'inline-flex';
+      saveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      saveBtn.title = 'Save offline';
+      saveBtn.onclick = () => saveCurrentCourse(course);
+      saveBtn.style.cursor = 'pointer';
+      saveBtn.style.opacity = '1';
+    }
+  }
+
+  const overlay = document.getElementById('readerModal');
+  overlay.classList.add('active');
+  document.body.style.overflow='hidden';
+  var _bn=document.querySelector('.bottom-nav');if(_bn)_bn.classList.add('hidden');
+
+  setTimeout(()=>{
+    const modal = document.getElementById('readerModalBox');
+    const focusables = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+    if(focusables.length) focusables[0].focus();
+    focusTrapHandler = (e)=>{
+      if(e.key!=='Tab') return;
+      const first = focusables[0], last = focusables[focusables.length-1];
+      if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
+      else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
+    };
+    modal.addEventListener('keydown', focusTrapHandler);
+  }, 50);
+
+  initSwipeToClose();
+}
+
+function saveCurrentCourse(course){
+  const saved = getSaved();
+  const courseNoteIds = course.notes.map(n => n.id);
+  let changed = false;
+  courseNoteIds.forEach(id => {
+    if(!saved.includes(id)){
+      saved.unshift(id);
+      changed = true;
+    }
+  });
+  if(changed){
+    setSaved(saved.slice(0,50));
+    const saveBtn = document.querySelector('.modal-actions .btn-ghost');
+    if(saveBtn){
+      saveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      saveBtn.title = 'Saved';
+      saveBtn.onclick = null;
+      saveBtn.style.cursor = 'default';
+      saveBtn.style.opacity = '0.7';
+      saveBtn.style.transform = 'scale(1.2)';
+      setTimeout(()=> saveBtn.style.transform = 'scale(1)', 250);
+    }
+    showToast(t('noteSaved'));
+  } else {
+    showToast(t('alreadySaved'));
+  }
+}
+
 /* ===================== APP NAV ===================== */
 function showAppView(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -709,6 +868,52 @@ function applyTranslation(){
 function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
 function fmtDate(i){ const d=new Date(i); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
 function fmtSize(b){ if(b<1024) return b+' B'; if(b<1024*1024) return (b/1024).toFixed(1)+' KB'; return (b/(1024*1024)).toFixed(1)+' MB'; }
+
+
+/* ===================== COURSE HELPERS ===================== */
+function getCourseName(title) {
+  if (!title) return 'Untitled';
+  if (title.includes(' — ')) return title.split(' — ')[0].trim();
+  if (title.includes(' - ')) return title.split(' - ')[0].trim();
+  return title.trim();
+}
+
+function getNoteName(title) {
+  if (!title) return 'Untitled';
+  if (title.includes(' — ')) return title.split(' — ').slice(1).join(' — ').trim();
+  if (title.includes(' - ')) return title.split(' - ').slice(1).join(' - ').trim();
+  return title.trim();
+}
+
+function groupByCourse(noteList) {
+  const map = {};
+  noteList.forEach(n => {
+    const cname = getCourseName(n.title);
+    if (!map[cname]) {
+      map[cname] = {
+        name: cname,
+        subject: n.subject,
+        author_name: n.author_name,
+        author_id: n.author_id,
+        created_at: n.created_at,
+        updated_at: n.updated_at,
+        size: 0,
+        notes: []
+      };
+    }
+    map[cname].notes.push(n);
+    map[cname].size += (n.size || 0);
+    if (new Date(n.created_at) > new Date(map[cname].created_at)) {
+      map[cname].created_at = n.created_at;
+    }
+  });
+  Object.values(map).forEach(c => {
+    c.notes.sort((a, b) => getNoteName(a.title).localeCompare(getNoteName(b.title)));
+  });
+  return Object.values(map).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+let courseContext = null;  // stores course object when viewing notes from a course list
 
 /* ===================== KEYBOARD SHORTCUTS ===================== */
 document.addEventListener('keydown', e=>{

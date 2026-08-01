@@ -333,6 +333,7 @@ body{
   padding:24px;cursor:pointer;position:relative;overflow:hidden;  transition:all .35s var(--ease-spring);
   box-shadow:0 1px 3px rgba(0,0,0,0.04);
   animation:cardEnter .5s var(--ease-out-expo) both;
+  display:flex;flex-direction:column;
 }
 .note-card:nth-child(1){animation-delay:.05s;}
 .note-card:nth-child(2){animation-delay:.1s;}
@@ -390,7 +391,7 @@ box-shadow:0 12px 28px rgba(0,0,0,0.1),0 0 0 1px var(--primary-light);
   font-size:13px;color:var(--text-light);line-height:1.5;margin-bottom:12px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
 }
-.note-meta{display:flex;align-items:center;gap:12px;color:var(--text-light);font-size:12px;}
+.note-meta{display:flex;align-items:center;justify-content:flex-end;color:var(--text-light);font-size:12px;margin-top:auto;padding-top:12px;}
 
 .empty-state{text-align:center;padding:80px 20px;color:var(--text-light);animation:fadeIn .6s var(--ease-out-expo) both;}
 .empty-state-icon{font-size:64px;margin-bottom:16px;opacity:.3;animation:float 3s ease-in-out infinite;}
@@ -642,4 +643,222 @@ input:focus+.slider{box-shadow:0 0 0 3px var(--primary-light);}
   .toast{left:16px;right:16px;max-width:none;bottom:80px;}
   .me-row{padding:18px 16px;}
   .manage-section{padding:16px;}
+}
+
+/* ================================================================
+   COURSE CARDS & NOTE LIST
+   ================================================================ */
+.course-card {
+  min-height: 180px;
+}
+
+.course-card .note-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.course-card .note-author {
+  margin-top: auto;
+  margin-bottom: 0;
+  padding-top: 12px;
+}
+
+.course-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.course-note-count {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.course-date {
+  font-weight: 500;
+}
+
+/* Course notes list inside modal */
+.modal-body .course-notes-list {
+  white-space: normal;
+  font-family: inherit;
+}
+
+.course-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.course-note-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all .3s var(--ease-spring);
+  animation: fadeIn .4s var(--ease-out-expo) both;
+}
+
+.course-note-item:hover {
+  border-color: var(--primary);
+  transform: translateX(6px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.course-note-item:active {
+  transform: translateX(3px) scale(0.99);
+}
+
+.course-note-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+  transition: all .25s var(--ease-spring);
+}
+
+.course-note-item:hover .course-note-number {
+  transform: scale(1.1);
+  background: var(--primary);
+  color: white;
+}
+
+.course-note-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.course-note-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  transition: color .2s;
+}
+
+.course-note-item:hover .course-note-title {
+  color: var(--primary);
+}
+
+.course-note-meta {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.course-note-arrow {
+  color: var(--text-light);
+  flex-shrink: 0;
+  transition: all .25s var(--ease-spring);
+}
+
+.course-note-item:hover .course-note-arrow {
+  transform: translateX(4px);
+  color: var(--primary);
+}
+
+/* Mobile adjustments for course list */
+@media(max-width:640px){
+  .course-note-item {
+    padding: 14px;
+    gap: 12px;
+  }
+  .course-note-number {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+  }
+  .course-note-title {
+    font-size: 14px;
+  }
+}
+
+/* ================================================================
+   SAVED COURSES SECTION
+   ================================================================ */
+.saved-courses-section {
+  margin-bottom: 8px;
+}
+
+.saved-courses-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.saved-courses-heading svg {
+  color: var(--primary);
+}
+
+.saved-courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.saved-course-card {
+  border: 2px solid var(--primary-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.saved-course-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--primary) 50%, transparent 50%);
+  opacity: 0.15;
+  border-radius: 0 0 0 12px;
+}
+
+.saved-course-card:hover::after {
+  opacity: 0.25;
+}
+
+@media(max-width:640px){
+  .saved-courses-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================================================
+   HIDE PREMIUM CARD
+   ================================================================ */
+.premium-card {
+  display: none !important;
+}
+
+/* ================================================================
+   COURSE BACK BUTTON
+   ================================================================ */
+#courseBackBtn {
+  margin-right: 4px;
 }
